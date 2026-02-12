@@ -1,0 +1,36 @@
+# ===============================================
+# 1. GLOBAL RULES (Apply to the whole project)
+# ===============================================
+# Block all raw data and large files by default
+*.csv
+*.xlsx
+*.parquet
+*.pkl
+*.h5
+*.png
+*.jpg
+__pycache__/
+.ipynb_checkpoints/
+
+# ===============================================
+# 2. FOLDER: dataPreprocessing
+# ===============================================
+# Rule: Allow the source code folder
+!dataPreprocessing/source code/
+
+# Rule: Allow ONLY certain Excel files
+!dataPreprocessing/csv/step3_claims_meds_and_comps.xlsx
+!dataPreprocessing/csv/step4_patient_aggregated.xlsx
+!dataPreprocessing/csv/patient_id_key.xlsx
+# ===============================================
+# 3. FOLDER: ML_pipeline (Future Proofing)
+# ===============================================
+# Rule: Allow the ML code (when you create it)
+!ML_pipeline/source code/
+!ML_pipeline/notebooks/
+
+# Rule: Block 'models' folder by default (usually large files)
+ML_pipeline/models/
+
+# Exception: If you want to upload the FINAL model later, uncomment this:
+# !ML_pipeline/models/final_random_forest.pkl
