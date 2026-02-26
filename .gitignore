@@ -22,6 +22,7 @@ __pycache__/
 !dataPreprocessing/csv/step3_claims_meds_and_comps.xlsx
 !dataPreprocessing/csv/step4_patient_aggregated.xlsx
 !dataPreprocessing/csv/patient_id_key.xlsx
+!machineLearning/csv/ml_ready_dataset.csv
 # ===============================================
 # 3. FOLDER: ML_pipeline (Future Proofing)
 # ===============================================
