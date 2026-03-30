@@ -6,7 +6,7 @@ import { Stethoscope, LogIn, Activity, AlertCircle, BarChart2 } from 'lucide-rea
 import './index.css';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('predictions');
+  const [activeTab, setActiveTab] = useState('eda');
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -74,18 +74,18 @@ export default function App() {
 
         <nav className="nav-links">
           <button 
-            className={`nav-btn ${activeTab === 'predictions' && !selectedPatient ? 'active' : ''}`}
-            onClick={() => { setActiveTab('predictions'); setSelectedPatient(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Activity size={16} /> ML Batch Directory
-          </button>
-          <button 
             className={`nav-btn ${activeTab === 'eda' && !selectedPatient ? 'active' : ''}`}
             onClick={() => { setActiveTab('eda'); setSelectedPatient(null); }}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
           >
-            <BarChart2 size={16} /> Dataset EDAs
+            <Activity size={16} /> Dataset EDAs
+          </button>
+          <button 
+            className={`nav-btn ${activeTab === 'predictions' && !selectedPatient ? 'active' : ''}`}
+            onClick={() => { setActiveTab('predictions'); setSelectedPatient(null); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <BarChart2 size={16} /> Patient Triage Pipeline
           </button>
         </nav>
 
