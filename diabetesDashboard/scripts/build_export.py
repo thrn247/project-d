@@ -95,11 +95,16 @@ for idx in range(len(df_patient)):
     # Or just keep it for everyone since the user wants it to be the primary view
     top_drivers = get_top_features_fast(idx, shap_values_adm, feature_names)
     
+    avg_los = float(df_ml.loc[idx, 'Avg_LOS']) if 'Avg_LOS' in df_ml.columns else 0.0
+    total_dx = int(df_ml.loc[idx, 'Total_Unique_Diagnoses']) if 'Total_Unique_Diagnoses' in df_ml.columns else 0
+
     record = {
         'Patient_ID': str(pid),
         'Age': age,
         'Sex': sex,
         'Severity': severity_str,
+        'Avg_LOS': avg_los,
+        'Total_Unique_Diagnoses': total_dx,
         'Stage_1_Admission_Risk': float(adm_risk[idx]),
         'Predicted_Admission': int(adm_pred[idx]),
         'Stage_2_Readmission_Risk': float(readm_risk[idx]) if not np.isnan(readm_risk[idx]) else None,

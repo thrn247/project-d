@@ -275,25 +275,28 @@ export default function PredictionsDirectory({ data }) {
 
         {viewMode === 'grid' ? renderGridCards() : (
           <div style={{ overflowX: 'auto', flex: 1, position: 'relative' }}>
+            <div style={{ padding: '0.5rem 1.5rem', background: 'var(--bg-dark)', borderBottom: '1px solid var(--border-light)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+               <strong>Pipeline Sorting Logic:</strong> Patients are systematically ordered <strong>Descending</strong> by baseline Stage 1 Admission Risk.
+            </div>
             <table className="data-grid">
               <thead>
                 <tr>
                   <th onClick={() => handleSort('Patient_ID')} style={{ cursor: 'pointer' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>ID {getSortIcon('Patient_ID')}</div>
                   </th>
-                  <th>Demographics</th>
-                  <th onClick={() => handleSort('Severity')} style={{ cursor: 'pointer' }}>Severity</th>
-                  <th onClick={() => handleSort('Stage_1_Admission_Risk')} style={{ cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <th style={{ textAlign: 'center' }}>Demographics</th>
+                  <th onClick={() => handleSort('Severity')} style={{ cursor: 'pointer', textAlign: 'center' }}>Severity</th>
+                  <th onClick={() => handleSort('Stage_1_Admission_Risk')} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
                       <TrendingUp size={14} /> Adm. Risk {getSortIcon('Stage_1_Admission_Risk')}
                     </div>
                   </th>
-                  <th onClick={() => handleSort('Stage_2_Readmission_Risk')} style={{ cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                  <th onClick={() => handleSort('Stage_2_Readmission_Risk')} style={{ cursor: 'pointer', textAlign: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem' }}>
                        Readmit Risk {getSortIcon('Stage_2_Readmission_Risk')}
                     </div>
                   </th>
-                  <th>Primary Driver</th>
+                  <th style={{ textAlign: 'center' }}>Primary Driver</th>
                 </tr>
               </thead>
               <tbody className="table-body-anim">
@@ -303,16 +306,16 @@ export default function PredictionsDirectory({ data }) {
                   return (
                   <tr key={`${patient.Patient_ID}-${idx}`} onClick={() => openSlideOut(patient)} className="clickable-row">
                     <td style={{ fontWeight: '600', color: 'var(--text-main)', paddingLeft: '1.5rem', fontFamily: 'Manrope, sans-serif' }}>{patient.Patient_ID}</td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       {patient.Age} yrs • {patient.Sex}
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <span className={`badge ${severityClass}`}>{patient.Severity}</span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       <span className="display-num">{(patient.Stage_1_Admission_Risk * 100).toFixed(1)}%</span>
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       {patient.Stage_2_Readmission_Risk !== null ? (
                         <span className="display-num" style={{ color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>
                            {(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%
@@ -321,9 +324,9 @@ export default function PredictionsDirectory({ data }) {
                         <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>N/A</span>
                       )}
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'center' }}>
                       {patient.Top_Risk_Drivers && patient.Top_Risk_Drivers.length > 0 ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
                           <AlertCircle size={14} /> {patient.Top_Risk_Drivers[0].split(' (+')[0]}
                         </div>
                       ) : (

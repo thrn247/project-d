@@ -146,7 +146,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                     >
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
                       <XAxis type="number" tickFormatter={(value) => `${value}%`} stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
-                      <YAxis dataKey="name" type="category" width={120} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
+                      <YAxis dataKey="name" type="category" width={200} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
                       <Tooltip 
                         cursor={{ fill: 'rgba(255,255,255,0.02)' }}
                         formatter={(value) => [`+${value.toFixed(1)}% Impact`, 'SHAP Bias']}

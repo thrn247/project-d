@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import PredictionsDirectory from './components/PredictionsDirectory';
 import PatientDetail from './components/PatientDetail';
 import EDAView from './components/EDAView';
-import { Stethoscope, LogIn, Activity, AlertCircle, BarChart2 } from 'lucide-react';
+import { Stethoscope, Activity, BarChart2, Sun, Moon } from 'lucide-react';
 import './index.css';
 
 export default function App() {
@@ -10,6 +10,18 @@ export default function App() {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // New Light Mode System 
+  const [isLightMode, setIsLightMode] = useState(false);
+
+  useEffect(() => {
+    // Sync the local state strictly to the css DOM structure
+    if (isLightMode) {
+      document.body.classList.add('light-mode');
+    } else {
+      document.body.classList.remove('light-mode');
+    }
+  }, [isLightMode]);
 
   useEffect(() => {
     // In a real hospital, this would fetch from a secure API endpoint
@@ -56,59 +68,66 @@ export default function App() {
   return (
     <div className="app-container">
       {/* Top Navbar */}
-      <header className="header">
+      <header className="header" style={{ padding: '1.5rem 3rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ 
             background: 'linear-gradient(135deg, var(--primary), #a78bfa)', 
-            padding: '0.5rem', 
-            borderRadius: '10px',
+            padding: '0.6rem', 
+            borderRadius: '12px',
             boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
           }}>
             <Stethoscope color="white" />
           </div>
           <div>
-            <h1 style={{ fontSize: '1.25rem', margin: '0' }}>Clinical Data & Prediction Insights</h1>
-            <p style={{ margin: '0', fontSize: '0.8rem' }}>AI-Assisted Admission Explorer</p>
+            <h1 style={{ fontSize: '1.35rem', margin: '0' }}>Clinical Data & Prediction Insights</h1>
+            <p style={{ margin: '0', fontSize: '0.85rem' }}>AI-Assisted Admission Explorer</p>
           </div>
         </div>
 
-        <nav className="nav-links">
+        <nav className="nav-links" style={{ padding: '0.5rem', background: 'var(--bg-surface)' }}>
           <button 
             className={`nav-btn ${activeTab === 'eda' && !selectedPatient ? 'active' : ''}`}
             onClick={() => { setActiveTab('eda'); setSelectedPatient(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
           >
             <Activity size={16} /> Dataset EDAs
           </button>
           <button 
             className={`nav-btn ${activeTab === 'predictions' && !selectedPatient ? 'active' : ''}`}
             onClick={() => { setActiveTab('predictions'); setSelectedPatient(null); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
           >
             <BarChart2 size={16} /> Patient Triage Pipeline
           </button>
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Analyzed: 62,135 Profiles</span>
-          <button style={{ 
-            background: 'rgba(255,255,255,0.05)', 
-            border: '1px solid var(--border-light)', 
-            color: 'var(--text-main)', 
-            padding: '0.5rem 1rem', 
-            borderRadius: '8px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}>
-            <LogIn size={16} /> Clinician Export
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: 62,135 Profiles</span>
+          
+          {/* Light Mode / Dark Mode Toggle */}
+          <button 
+            onClick={() => setIsLightMode(!isLightMode)}
+            style={{ 
+              background: 'var(--bg-surface)', 
+              border: '1px solid var(--border-light)', 
+              color: 'var(--text-main)', 
+              padding: '0.6rem', 
+              borderRadius: '50%',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'var(--transition)'
+            }}
+            title={isLightMode ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          >
+            {isLightMode ? <Moon size={20} color="var(--primary)" /> : <Sun size={20} color="var(--primary)" />}
           </button>
         </div>
       </header>
 
       {/* Main View Area */}
-      <main className="main-content">
+      <main className="main-content" style={{ padding: '3rem' }}>
         {data.length > 0 ? (
           renderContent()
         ) : (
