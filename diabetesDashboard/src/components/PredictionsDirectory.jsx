@@ -133,24 +133,22 @@ export default function PredictionsDirectory({ data }) {
         {gridItems.map((patient, idx) => {
           const severityClass = patient.Severity.toLowerCase();
           return (
-            <div key={`${patient.Patient_ID}-${idx}`} className={`patient-card ${severityClass}`} onClick={() => openSlideOut(patient)}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', color: 'var(--text-main)' }}>{patient.Patient_ID}</h3>
-                  <p style={{ margin: 0, fontSize: '0.85rem' }}>{patient.Age} yrs • {patient.Sex}</p>
-                </div>
+            <div key={`${patient.Patient_ID}-${idx}`} className={`patient-card ${severityClass}`} onClick={() => openSlideOut(patient)} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minHeight: '280px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <span className={`badge ${severityClass}`}>{patient.Severity}</span>
+                <h3 style={{ fontSize: '1.5rem', margin: '0', color: 'var(--text-main)' }}>{patient.Patient_ID}</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem' }}>{patient.Age} yrs • {patient.Sex}</p>
               </div>
               
-              <div style={{ margin: '1.5rem 0', display: 'flex', gap: '1rem' }}>
-                <div>
+              <div style={{ margin: '1.5rem 0', display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+                <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Admit Risk</div>
                   <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : 'var(--text-main)' }}>
                     {(patient.Stage_1_Admission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
                   </div>
                 </div>
                 {patient.Stage_2_Readmission_Risk !== null && (
-                  <div>
+                  <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Readmit Risk</div>
                     <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>
                       {(patient.Stage_2_Readmission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
@@ -160,7 +158,7 @@ export default function PredictionsDirectory({ data }) {
               </div>
 
               {patient.Top_Risk_Drivers && patient.Top_Risk_Drivers.length > 0 && (
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--bg-dark)', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid var(--border-light)' }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--bg-dark)', padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-light)', display: 'inline-block' }}>
                   <span style={{ color: 'var(--danger)', fontWeight: '600', marginRight: '0.5rem' }}>↑ Drivers:</span>
                   {patient.Top_Risk_Drivers[0].split(' (+')[0]}
                 </div>
