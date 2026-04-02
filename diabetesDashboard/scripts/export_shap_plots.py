@@ -3,22 +3,12 @@ import pandas as pd
 import numpy as np
 import joblib
 import shap
-import matplotlib
-import matplotlib.pyplot as plt
-
-# Structural Overrides mapping Matplotlib plots precisely to the React CSS (--text-muted) Slate-Grey (#475569)
-plt.rcParams['text.color'] = '#475569'
-plt.rcParams['axes.labelcolor'] = '#475569'
-plt.rcParams['xtick.color'] = '#475569'
-plt.rcParams['ytick.color'] = '#475569'
-plt.rcParams['axes.edgecolor'] = '#475569'
-plt.rcParams['font.family'] = 'sans-serif'
-plt.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'sans-serif']
+import json
 
 base_path = r'C:\Users\thiranbarath\Documents\GitHub\project-d'
 model_dir = os.path.join(base_path, 'machineLearning', 'models')
-img_out_dir = os.path.join(base_path, 'diabetesDashboard', 'public', 'assets')
-os.makedirs(img_out_dir, exist_ok=True)
+json_out_dir = os.path.join(base_path, 'diabetesDashboard', 'public', 'data')
+os.makedirs(json_out_dir, exist_ok=True)
 
 print("Loading dataset for SHAP plots...")
 ml_data_path = os.path.join(base_path, 'machineLearning', 'csv', 'ml_ready_dataset.csv')
@@ -47,22 +37,25 @@ binary_cols_readm = [c for c in X_readm_raw.columns if c not in continuous_cols_
 X_readm_scaled = scaler_readmission.transform(X_readm_raw)
 X_readm_final = pd.DataFrame(X_readm_scaled, columns=continuous_cols_readm + binary_cols_readm, index=X_readm_raw.index)
 
-# Sample to 3000 for standard clear visual rendering in Beeswarm Plots globally
-X_adm_sample = shap.sample(X_adm_final, 3000)
-X_readm_sample = shap.sample(X_readm_final, 3000)
+# Standardized Reproducible Extraction! No more random Vercel Discrepancies
+X_adm_sample = X_adm_final.sample(n=3000, random_state=42)
+X_readm_sample = X_readm_final.sample(n=3000, random_state=42)
 
 print("Calculating Admission Explainers...")
 explainer_adm = shap.TreeExplainer(xgb_admission)
 shap_values_adm = explainer_adm.shap_values(X_adm_sample)
 
-print("Generating Admission SHAP Beeswarm Plot...")
-plt.figure(figsize=(10, 6))
-shap.summary_plot(shap_values_adm, X_adm_sample, show=False)
-plt.tight_layout()
-plt.savefig(os.path.join(img_out_dir, 'shap_adm_beeswarm.png'), transparent=True, dpi=150)
-plt.close()
+# Global Admission Feature Importance
+print("Exporting Admission Global SHAP...")
+mean_abs_shap_adm = np.abs(shap_values_adm).mean(axis=0)
+imp_adm = pd.DataFrame({'feature': X_adm_final.columns, 'mean_shap': mean_abs_shap_adm})
+imp_adm = imp_adm.sort_values(by='mean_shap', ascending=False).head(15) # Highest at index 0 for React Top-Down render
+imp_adm_list = imp_adm.to_dict(orient='records')
+with open(os.path.join(json_out_dir, 'shap_adm_importance.json'), 'w') as f:
+    json.dump(imp_adm_list, f)
 
-print("Generating Admission SHAP Waterfall Example...")
+# Patient Admission Waterfall Extract
+print("Exporting Admission Waterfall Prototype...")
 adm_risk = xgb_admission.predict_proba(X_adm_final)[:, 1]
 high_risk_idx = np.argmax(adm_risk) 
 shap_values_full_adm = explainer_adm.shap_values(X_adm_final.iloc[[high_risk_idx]])
@@ -70,31 +63,36 @@ expected_value_adm = explainer_adm.expected_value
 if isinstance(expected_value_adm, np.ndarray): expected_value_adm = expected_value_adm[0]
 if isinstance(expected_value_adm, list): expected_value_adm = expected_value_adm[0]
 
-explanation_adm = shap.Explanation(
-    values=shap_values_full_adm[0],
-    base_values=expected_value_adm,
-    data=X_adm_final.iloc[high_risk_idx].values,
-    feature_names=X_adm_final.columns.tolist()
-)
+waterfall_adm = []
+feat_vals_adm = X_adm_final.iloc[high_risk_idx].values
+for i in range(len(X_adm_final.columns)):
+    if abs(shap_values_full_adm[0][i]) > 0.05: # Filter noise
+        waterfall_adm.append({
+            'name': X_adm_final.columns[i],
+            'feature_value': float(feat_vals_adm[i]),
+            'shap': float(shap_values_full_adm[0][i])  # Raw SHAP value
+        })
+waterfall_adm = sorted(waterfall_adm, key=lambda x: abs(x['shap']), reverse=True) # Highest impact at Index 0
 
-plt.figure(figsize=(10, 6))
-shap.plots.waterfall(explanation_adm, show=False)
-plt.tight_layout()
-plt.savefig(os.path.join(img_out_dir, 'shap_adm_waterfall.png'), transparent=True, dpi=150)
-plt.close()
+with open(os.path.join(json_out_dir, 'shap_adm_waterfall.json'), 'w') as f:
+    json.dump({'base_value': float(expected_value_adm), 'prediction': float(adm_risk[high_risk_idx]), 'data': waterfall_adm}, f)
+
 
 print("Calculating Readmission Explainers...")
 explainer_readm = shap.TreeExplainer(xgb_readmission)
 shap_values_readm = explainer_readm.shap_values(X_readm_sample)
 
-print("Generating Readmission SHAP Beeswarm Plot...")
-plt.figure(figsize=(10, 6))
-shap.summary_plot(shap_values_readm, X_readm_sample, show=False)
-plt.tight_layout()
-plt.savefig(os.path.join(img_out_dir, 'shap_readm_beeswarm.png'), transparent=True, dpi=150)
-plt.close()
+# Global Readmission Feature Importance
+print("Exporting Readmission Global SHAP...")
+mean_abs_shap_readm = np.abs(shap_values_readm).mean(axis=0)
+imp_readm = pd.DataFrame({'feature': X_readm_final.columns, 'mean_shap': mean_abs_shap_readm})
+imp_readm = imp_readm.sort_values(by='mean_shap', ascending=False).head(15) 
+imp_readm_list = imp_readm.to_dict(orient='records')
+with open(os.path.join(json_out_dir, 'shap_readm_importance.json'), 'w') as f:
+    json.dump(imp_readm_list, f)
 
-print("Generating Readmission SHAP Waterfall Example...")
+# Patient Readmission Waterfall Extract
+print("Exporting Readmission Waterfall Prototype...")
 readm_risk = xgb_readmission.predict_proba(X_readm_final)[:, 1]
 high_readm_risk_idx = np.nanargmax(readm_risk)
 shap_values_full_readm = explainer_readm.shap_values(X_readm_final.iloc[[high_readm_risk_idx]])
@@ -102,17 +100,18 @@ expected_value_readm = explainer_readm.expected_value
 if isinstance(expected_value_readm, np.ndarray): expected_value_readm = expected_value_readm[0]
 if isinstance(expected_value_readm, list): expected_value_readm = expected_value_readm[0]
 
-explanation_readm = shap.Explanation(
-    values=shap_values_full_readm[0],
-    base_values=expected_value_readm,
-    data=X_readm_final.iloc[high_readm_risk_idx].values,
-    feature_names=X_readm_final.columns.tolist()
-)
+waterfall_readm = []
+feat_vals_readm = X_readm_final.iloc[high_readm_risk_idx].values
+for i in range(len(X_readm_final.columns)):
+    if abs(shap_values_full_readm[0][i]) > 0.05: # Filter noise
+        waterfall_readm.append({
+            'name': X_readm_final.columns[i],
+            'feature_value': float(feat_vals_readm[i]),
+            'shap': float(shap_values_full_readm[0][i])
+        })
+waterfall_readm = sorted(waterfall_readm, key=lambda x: abs(x['shap']), reverse=True)
 
-plt.figure(figsize=(10, 6))
-shap.plots.waterfall(explanation_readm, show=False)
-plt.tight_layout()
-plt.savefig(os.path.join(img_out_dir, 'shap_readm_waterfall.png'), transparent=True, dpi=150)
-plt.close()
+with open(os.path.join(json_out_dir, 'shap_readm_waterfall.json'), 'w') as f:
+    json.dump({'base_value': float(expected_value_readm), 'prediction': float(readm_risk[high_readm_risk_idx]), 'data': waterfall_readm}, f)
 
-print(f"✅ Extracted 4 styled Multi-Format PNG Models successfully to {img_out_dir}")
+print(f"✅ Extracted 4 Strict Interactive JSON Arrays successfully to {json_out_dir}")
