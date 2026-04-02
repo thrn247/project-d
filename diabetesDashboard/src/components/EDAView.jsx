@@ -11,6 +11,9 @@ export default function EDAView({ data }) {
   const [activeAdmTab, setActiveAdmTab] = useState('beeswarm'); // 'beeswarm' | 'waterfall'
   const [activeReadmTab, setActiveReadmTab] = useState('beeswarm'); 
 
+  // Image Error States mapping
+  const [imgErrors, setImgErrors] = useState({});
+
   // Strict dataset filter before processing mapping rules.
   const filteredData = useMemo(() => {
     let rs = data;
@@ -108,7 +111,7 @@ export default function EDAView({ data }) {
 
     filteredData.forEach(d => {
         let { Severity, Avg_LOS } = d;
-        if (Avg_LOS === undefined) return;
+        if (Avg_LOS === undefined || Avg_LOS <= 0) return;
         if (buckets[Severity]) {
            buckets[Severity].totalLos += Avg_LOS;
            buckets[Severity].count++;
@@ -212,89 +215,12 @@ export default function EDAView({ data }) {
           </div>
         </div>
 
-        {/* Global SHAP Matrix Sub-Tab Injection Base */}
-        <h2 style={{ paddingTop: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', marginBottom: '2.5rem' }}>
-            <Activity color="var(--danger)" size={24} /> Explicit Machine Learning SHAP Extrapolations
-        </h2>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '4rem' }}>
-           
-           {/* Admission SHAP Tabs */}
-           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
-               <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem' }}>Admission TreeExplainer (Stage 1)</h3>
-               
-               {/* Nav Module */}
-               <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
-                  <button 
-                    onClick={() => setActiveAdmTab('beeswarm')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
-                  >
-                    Global Beeswarm Scatter
-                  </button>
-                  <button 
-                    onClick={() => setActiveAdmTab('waterfall')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
-                  >
-                    Patient Waterfall Prototype
-                  </button>
-               </div>
-               
-               {/* Extracted Asset Render */}
-               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
-                  <img 
-                    src={activeAdmTab === 'beeswarm' ? "/assets/shap_adm_beeswarm.png" : "/assets/shap_adm_waterfall.png"}
-                    alt={`Stage 1 Admission ${activeAdmTab}`}
-                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }}
-                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                  />
-                  <div style={{ display: 'none', color: 'var(--danger)', padding: '2rem', textAlign: 'center' }}>
-                     Failed to load Pyplot Extrapolation script. Please wait for execution synchronization.
-                  </div>
-               </div>
-           </div>
-
-           {/* Readmission SHAP Tabs */}
-           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
-               <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem' }}>Readmission TreeExplainer (Stage 2)</h3>
-               
-               {/* Nav Module */}
-               <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
-                  <button 
-                    onClick={() => setActiveReadmTab('beeswarm')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
-                  >
-                    Global Beeswarm Scatter
-                  </button>
-                  <button 
-                    onClick={() => setActiveReadmTab('waterfall')}
-                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
-                  >
-                    Patient Waterfall Prototype
-                  </button>
-               </div>
-               
-               {/* Extracted Asset Render */}
-               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
-                  <img 
-                    src={activeReadmTab === 'beeswarm' ? "/assets/shap_readm_beeswarm.png" : "/assets/shap_readm_waterfall.png"}
-                    alt={`Stage 2 Readmission ${activeReadmTab}`}
-                    style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }}
-                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
-                  />
-                  <div style={{ display: 'none', color: 'var(--danger)', padding: '2rem', textAlign: 'center' }}>
-                     Failed to load Pyplot Extrapolation script. Please wait for execution synchronization.
-                  </div>
-               </div>
-           </div>
-
-        </div>
-
         {/* Exploratory Charts */}
         <h2 style={{ paddingTop: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', marginBottom: '2.5rem' }}>
             <TrendingUp color="var(--primary)" size={24} /> Core Demographical Algorithms
         </h2>
         
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3rem', marginBottom: '3rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3rem', marginBottom: '4rem' }}>
             
             {/* Age vs Risk Chart */}
             <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
@@ -303,7 +229,7 @@ export default function EDAView({ data }) {
                 </h3>
                 <div style={{ width: '100%', height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={ageRiskData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <AreaChart data={ageRiskData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <defs>
                               <linearGradient id="colorRiskAvg" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.5}/>
@@ -338,7 +264,7 @@ export default function EDAView({ data }) {
                         >
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
                         <XAxis type="number" stroke="var(--text-muted)" fontSize={11} tickFormatter={val => val} axisLine={false} tickLine={false} hide />
-                        <YAxis dataKey="name" type="category" width={110} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
+                        <YAxis dataKey="name" type="category" width={180} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
                         <Tooltip 
                             cursor={{ fill: 'rgba(120,120,120,0.05)' }}
                             contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-main)' }}
@@ -363,11 +289,11 @@ export default function EDAView({ data }) {
             {/* BRAND NEW LOGISTIC RESOURCE CHART: LOS vs Severity */}
             <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Clock size={16} color="var(--success)" /> Predicted Length of Stay Timeline
+                    <Clock size={16} color="var(--success)" /> Average Length of Stay by Severity
                 </h3>
                 <div style={{ width: '100%', height: '280px' }}>
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={losRiskData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={losRiskData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                             <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                             <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => v + ' days'} />
@@ -391,6 +317,91 @@ export default function EDAView({ data }) {
             </div>
 
         </div>
+
+        {/* Global SHAP Matrix Sub-Tab Injection Base */}
+        <h2 style={{ paddingTop: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', marginBottom: '2.5rem' }}>
+            <Activity color="var(--danger)" size={24} /> Explicit Machine Learning SHAP Extrapolations
+        </h2>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '4rem' }}>
+           
+           {/* Admission SHAP Tabs */}
+           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
+               <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem' }}>Admission TreeExplainer (Stage 1)</h3>
+               
+               {/* Nav Module */}
+               <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
+                  <button 
+                    onClick={() => setActiveAdmTab('beeswarm')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
+                  >
+                    Global Beeswarm Scatter
+                  </button>
+                  <button 
+                    onClick={() => setActiveAdmTab('waterfall')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
+                  >
+                    Patient Waterfall Prototype
+                  </button>
+               </div>
+               
+               {/* Extracted Asset Render */}
+               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
+                  {imgErrors[`adm_${activeAdmTab}`] ? (
+                    <div style={{ color: 'var(--danger)', padding: '2rem', textAlign: 'center' }}>
+                       Failed to load Pyplot Extrapolation script. Please wait for execution synchronization.
+                    </div>
+                  ) : (
+                    <img 
+                      src={activeAdmTab === 'beeswarm' ? "/assets/shap_adm_beeswarm.png" : "/assets/shap_adm_waterfall.png"}
+                      alt={`Stage 1 Admission ${activeAdmTab}`}
+                      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }}
+                      onError={() => setImgErrors(prev => ({...prev, [`adm_${activeAdmTab}`]: true}))}
+                    />
+                  )}
+               </div>
+           </div>
+
+           {/* Readmission SHAP Tabs */}
+           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
+               <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem' }}>Readmission TreeExplainer (Stage 2)</h3>
+               
+               {/* Nav Module */}
+               <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
+                  <button 
+                    onClick={() => setActiveReadmTab('beeswarm')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
+                  >
+                    Global Beeswarm Scatter
+                  </button>
+                  <button 
+                    onClick={() => setActiveReadmTab('waterfall')}
+                    style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
+                  >
+                    Patient Waterfall Prototype
+                  </button>
+               </div>
+               
+               {/* Extracted Asset Render */}
+               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
+                  {imgErrors[`readm_${activeReadmTab}`] ? (
+                    <div style={{ color: 'var(--danger)', padding: '2rem', textAlign: 'center' }}>
+                       Failed to load Pyplot Extrapolation script. Please wait for execution synchronization.
+                    </div>
+                  ) : (
+                    <img 
+                      src={activeReadmTab === 'beeswarm' ? "/assets/shap_readm_beeswarm.png" : "/assets/shap_readm_waterfall.png"}
+                      alt={`Stage 2 Readmission ${activeReadmTab}`}
+                      style={{ maxWidth: '100%', height: 'auto', borderRadius: '0.5rem' }}
+                      onError={() => setImgErrors(prev => ({...prev, [`readm_${activeReadmTab}`]: true}))}
+                    />
+                  )}
+               </div>
+           </div>
+
+        </div>
+
+
 
       </div>
     </div>

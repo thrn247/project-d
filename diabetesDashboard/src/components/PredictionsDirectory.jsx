@@ -136,7 +136,7 @@ export default function PredictionsDirectory({ data }) {
             <div key={`${patient.Patient_ID}-${idx}`} className={`patient-card ${severityClass}`} onClick={() => openSlideOut(patient)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
-                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', color: '#fff' }}>{patient.Patient_ID}</h3>
+                  <h3 style={{ fontSize: '1.25rem', marginBottom: '0.2rem', color: 'var(--text-main)' }}>{patient.Patient_ID}</h3>
                   <p style={{ margin: 0, fontSize: '0.85rem' }}>{patient.Age} yrs • {patient.Sex}</p>
                 </div>
                 <span className={`badge ${severityClass}`}>{patient.Severity}</span>
@@ -145,14 +145,14 @@ export default function PredictionsDirectory({ data }) {
               <div style={{ margin: '1.5rem 0', display: 'flex', gap: '1rem' }}>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Admit Risk</div>
-                  <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : '#fff' }}>
+                  <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : 'var(--text-main)' }}>
                     {(patient.Stage_1_Admission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
                   </div>
                 </div>
                 {patient.Stage_2_Readmission_Risk !== null && (
                   <div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Readmit Risk</div>
-                    <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : '#fff' }}>
+                    <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>
                       {(patient.Stage_2_Readmission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
                     </div>
                   </div>
@@ -254,7 +254,7 @@ export default function PredictionsDirectory({ data }) {
                   key={f}
                   onClick={() => handleFilter(f)}
                   style={{
-                    background: filter === f ? 'var(--primary-container)' : 'transparent',
+                    background: filter === f ? 'var(--primary)' : 'transparent',
                     color: filter === f ? '#fff' : 'var(--text-muted)',
                     border: 'none',
                     padding: '0.5rem 1rem',

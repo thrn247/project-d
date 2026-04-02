@@ -111,7 +111,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                   <span className="label">Admission Risk</span>
                   <Activity size={16} color="var(--primary)" />
                 </div>
-                <div className="value" style={{ color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : '#fff' }}>
+                <div className="value" style={{ color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : 'var(--text-main)' }}>
                   {(patient.Stage_1_Admission_Risk * 100).toFixed(1)}%
                 </div>
               </div>
@@ -123,7 +123,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                 </div>
                 <div className="value">
                   {patient.Stage_2_Readmission_Risk !== null ? 
-                    <span style={{ color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : '#fff' }}>{(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%</span> : 
+                    <span style={{ color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>{(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%</span> : 
                     <span style={{ fontSize: '1rem', fontWeight: '400', color: 'var(--text-muted)' }}>N/A</span>
                   }
                 </div>
@@ -144,11 +144,11 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                       layout="vertical"
                       margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(255,255,255,0.05)" />
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
                       <XAxis type="number" tickFormatter={(value) => `${value}%`} stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
                       <YAxis dataKey="name" type="category" width={200} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
                       <Tooltip 
-                        cursor={{ fill: 'rgba(255,255,255,0.02)' }}
+                        cursor={{ fill: 'var(--border-light)' }}
                         formatter={(value) => [`+${value.toFixed(1)}% Impact`, 'SHAP Bias']}
                       />
                       <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={20}>

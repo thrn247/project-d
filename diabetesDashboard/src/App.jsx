@@ -1,27 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import PredictionsDirectory from './components/PredictionsDirectory';
-import PatientDetail from './components/PatientDetail';
 import EDAView from './components/EDAView';
 import { Stethoscope, Activity, BarChart2, Sun, Moon } from 'lucide-react';
 import './index.css';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('eda');
-  const [selectedPatient, setSelectedPatient] = useState(null);
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // New Light Mode System 
-  const [isLightMode, setIsLightMode] = useState(false);
-
-  useEffect(() => {
-    // Sync the local state strictly to the css DOM structure
-    if (isLightMode) {
-      document.body.classList.add('light-mode');
-    } else {
-      document.body.classList.remove('light-mode');
-    }
-  }, [isLightMode]);
 
   useEffect(() => {
     // In a real hospital, this would fetch from a secure API endpoint
@@ -52,18 +38,7 @@ export default function App() {
     );
   }
 
-  // Handle navigation
-  const renderContent = () => {
-    if (selectedPatient) {
-      return <PatientDetail patient={selectedPatient} onBack={() => setSelectedPatient(null)} />;
-    }
 
-    if (activeTab === 'predictions') {
-      return <PredictionsDirectory data={data} onSelectPatient={setSelectedPatient} />;
-    } else if (activeTab === 'eda') {
-      return <EDAView data={data} />;
-    }
-  };
 
   return (
     <div className="app-container">
@@ -86,15 +61,15 @@ export default function App() {
 
         <nav className="nav-links" style={{ padding: '0.5rem', background: 'var(--bg-surface)' }}>
           <button 
-            className={`nav-btn ${activeTab === 'eda' && !selectedPatient ? 'active' : ''}`}
-            onClick={() => { setActiveTab('eda'); setSelectedPatient(null); }}
+            className={`nav-btn ${activeTab === 'eda' ? 'active' : ''}`}
+            onClick={() => setActiveTab('eda')}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
           >
             <Activity size={16} /> Dataset EDAs
           </button>
           <button 
-            className={`nav-btn ${activeTab === 'predictions' && !selectedPatient ? 'active' : ''}`}
-            onClick={() => { setActiveTab('predictions'); setSelectedPatient(null); }}
+            className={`nav-btn ${activeTab === 'predictions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('predictions')}
             style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
           >
             <BarChart2 size={16} /> Patient Triage Pipeline
@@ -103,33 +78,13 @@ export default function App() {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: 62,135 Profiles</span>
-          
-          {/* Light Mode / Dark Mode Toggle */}
-          <button 
-            onClick={() => setIsLightMode(!isLightMode)}
-            style={{ 
-              background: 'var(--bg-surface)', 
-              border: '1px solid var(--border-light)', 
-              color: 'var(--text-main)', 
-              padding: '0.6rem', 
-              borderRadius: '50%',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'var(--transition)'
-            }}
-            title={isLightMode ? "Switch to Dark Mode" : "Switch to Light Mode"}
-          >
-            {isLightMode ? <Moon size={20} color="var(--primary)" /> : <Sun size={20} color="var(--primary)" />}
-          </button>
         </div>
       </header>
 
       {/* Main View Area */}
       <main className="main-content" style={{ padding: '3rem' }}>
         {data.length > 0 ? (
-          renderContent()
+          activeTab === 'predictions' ? <PredictionsDirectory data={data} /> : <EDAView data={data} />
         ) : (
           <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
             <AlertCircle size={48} color="var(--danger)" style={{ marginBottom: '1rem', opacity: 0.8 }} />

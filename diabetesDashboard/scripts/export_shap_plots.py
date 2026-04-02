@@ -6,12 +6,12 @@ import shap
 import matplotlib
 import matplotlib.pyplot as plt
 
-# Structural Overrides mapping Matplotlib plots precisely to the React CSS (--text-muted) Slate-Grey (#889296)
-plt.rcParams['text.color'] = '#889296'
-plt.rcParams['axes.labelcolor'] = '#889296'
-plt.rcParams['xtick.color'] = '#889296'
-plt.rcParams['ytick.color'] = '#889296'
-plt.rcParams['axes.edgecolor'] = '#889296'
+# Structural Overrides mapping Matplotlib plots precisely to the React CSS (--text-muted) Slate-Grey (#475569)
+plt.rcParams['text.color'] = '#475569'
+plt.rcParams['axes.labelcolor'] = '#475569'
+plt.rcParams['xtick.color'] = '#475569'
+plt.rcParams['ytick.color'] = '#475569'
+plt.rcParams['axes.edgecolor'] = '#475569'
 plt.rcParams['font.family'] = 'sans-serif'
 plt.rcParams['font.sans-serif'] = ['Helvetica', 'Arial', 'sans-serif']
 
