@@ -2,13 +2,14 @@ import polars as pl
 import os
 
 # 1. SETUP PATHS
-path_parquet = r"C:\Users\thiranbarath\Documents\GitHub\dataPreprocessing\parquet\e11_claims.parquet"
-output_path = r"C:\Users\thiranbarath\Documents\GitHub\dataPreprocessing\csv\step1_claims_filtered.xlsx"
+base_dir = os.path.join(os.path.dirname(__file__), "..")
+path_parquet = os.path.join(base_dir, "parquet", "e11_claims.parquet")
+output_path = os.path.join(base_dir, "csv", "step1_claims_filtered.xlsx")
 
-# The Blacklist
+# Provider Blacklist
 provider_blacklist = ["SUPP343", "PHAR455", "PHAR588", "KPJ036"]
 
-# --- THE DROP LIST (Updated: Removed 'OTHER_DIAGNOSIS') ---
+# Columns to drop (maintaining OTHER_DIAGNOSIS)
 cols_to_drop = [
     "DIAGNOSIS_LMGROUP", "RELATION", "CLAIM_AMOUNT", 
     "APPROVE_AMOUNT", "CLAIMANT_TYPE_CODE", "TREATMENT_DETAIL_CODE",
@@ -32,11 +33,11 @@ try:
     # 3. FILTER
     if "PROVIDER_CODE" in df.columns:
         df_clean = df.filter(~pl.col("PROVIDER_CODE").is_in(provider_blacklist))
-        print(f"✅ Removed {len(df) - len(df_clean)} pharmacy records.")
+        print(f"Removed {len(df) - len(df_clean)} pharmacy records.")
     else:
         df_clean = df
 
-    # 4. DROP (Keeping OTHER_DIAGNOSIS now)
+    # 4. DROP (Keeping OTHER_DIAGNOSIS)
     existing_drops = [c for c in cols_to_drop if c in df_clean.columns]
     df_clean = df_clean.drop(existing_drops)
 
@@ -45,7 +46,7 @@ try:
     pdf = df_clean.to_pandas()
     if len(pdf) > 1000000: pdf = pdf.head(1000000)
     pdf.to_excel(output_path, index=False)
-    print(f"✅ SAVED: {output_path} (Includes OTHER_DIAGNOSIS)")
+    print(f"Saved: {output_path} (Includes OTHER_DIAGNOSIS)")
 
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"Error: {e}")
