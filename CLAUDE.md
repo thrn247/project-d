@@ -140,12 +140,15 @@ All scripts assume the current working directory is `dataPreprocessing/source co
 
 **Portable `base_path` convention** (every notebook + script):
 ```python
-base_path = os.environ.get("PROJECT_D_BASE", str(pathlib.Path.cwd().parents[2]))
+# Notebooks — Jupyter cwd is the notebook's folder (`<repo>/<track>/source code/`),
+# so `parents[1]` resolves to the repo root.
+base_path = os.environ.get("PROJECT_D_BASE", str(pathlib.Path(os.getcwd()).resolve().parents[1]))
+# Scripts — `__file__` lives at `<repo>/diabetesDashboard/scripts/*.py`, so parents[2] is the repo root.
 # (build_export.py / export_shap_plots.py use pathlib.Path(__file__).resolve().parents[2])
 ```
-Override with the `PROJECT_D_BASE` env var when running outside the repo layout. The legacy Windows-absolute path (`C:\Users\thiranbarath\...`) has been fully removed.
+Override with the `PROJECT_D_BASE` env var when running outside the repo layout. The legacy Windows-absolute path (`C:\Users\thiranbarath\...`) has been fully removed from every notebook and script.
 
-### 5.1 `01_ML_Data_Prep.ipynb` (4 cells)
+### 5.1 `01_ML_Data_Prep.ipynb` (8 cells — 4 code + 4 markdown step headers)
 - Loads `step4_patient_aggregated.xlsx`.
 - Encodes `SEVERITY_INDEX` → `Severity_Encoded` with `{Mild:0, Moderate:1, Severe:2}` and drops the text column.
 - Drops `Patient_ID` (leakage / identifier).
@@ -417,4 +420,4 @@ All seven items from the original audit have been closed. Retained here for hist
 
 ---
 
-*Last updated: 2026-04-21 (post-reproducibility-sweep + Avg_LOS ablation). Maintained alongside the `BDH2372 Research Project II` submission.*
+*Last updated: 2026-04-21 (post-reproducibility-sweep + Avg_LOS ablation + notebook docstring polish: every pipeline notebook now uses a consistent `### Step N:` header style with real descriptions, no placeholder text). Maintained alongside the `BDH2372 Research Project II` submission.*
