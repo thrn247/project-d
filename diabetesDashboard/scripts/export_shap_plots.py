@@ -1,11 +1,17 @@
 import os
+import pathlib
 import pandas as pd
 import numpy as np
 import joblib
 import shap
 import json
 
-base_path = r'C:\Users\thiranbarath\Documents\GitHub\project-d'
+# Portable repo root resolution — works on any machine without editing.
+# Override via env var PROJECT_D_BASE if running outside the repo layout.
+base_path = os.environ.get(
+    "PROJECT_D_BASE",
+    str(pathlib.Path(__file__).resolve().parents[2])
+)
 model_dir = os.path.join(base_path, 'machineLearning', 'models')
 json_out_dir = os.path.join(base_path, 'diabetesDashboard', 'public', 'data')
 os.makedirs(json_out_dir, exist_ok=True)
