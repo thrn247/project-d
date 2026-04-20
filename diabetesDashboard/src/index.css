@@ -32,6 +32,9 @@
   --app-gradient: none;
 }
 
+@keyframes fast-spin { to { transform: rotate(360deg); } }
+.fast-spin { animation: fast-spin 0.9s linear infinite; transform-origin: center; }
+
 * {
   box-sizing: border-box;
   margin: 0;
