@@ -2,35 +2,43 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell, AreaChart, Area } from 'recharts';
 import { Activity, Users, AlertTriangle, TrendingUp, Filter, ShieldAlert, Clock } from 'lucide-react';
 
-export default function EDAView({ data }) {
+export default function EDAView({ data, thresholds }) {
   // Global Filters
   const [filterGender, setFilterGender] = useState('All');
   const [filterSeverity, setFilterSeverity] = useState('All');
 
   // Sub-navigation SHAP plot states
   const [activeAdmTab, setActiveAdmTab] = useState('beeswarm'); // 'beeswarm' | 'waterfall'
-  const [activeReadmTab, setActiveReadmTab] = useState('beeswarm'); 
+  const [activeReadmTab, setActiveReadmTab] = useState('beeswarm');
 
   // SHAP Interactive Data States
   const [shapData, setShapData] = useState({
     adm_importance: [], adm_waterfall: null, readm_importance: [], readm_waterfall: null
   });
+  const [shapError, setShapError] = useState(null);
 
   useEffect(() => {
-    const fetchShap = async () => {
+    const fetchAll = async () => {
+      const shapUrls = [
+        '/data/shap_adm_importance.json',
+        '/data/shap_adm_waterfall.json',
+        '/data/shap_readm_importance.json',
+        '/data/shap_readm_waterfall.json'
+      ];
       try {
-        const [admImp, admWat, readmImp, readmWat] = await Promise.all([
-          fetch('/data/shap_adm_importance.json').then(r => r.json()),
-          fetch('/data/shap_adm_waterfall.json').then(r => r.json()),
-          fetch('/data/shap_readm_importance.json').then(r => r.json()),
-          fetch('/data/shap_readm_waterfall.json').then(r => r.json())
-        ]);
+        const [admImp, admWat, readmImp, readmWat] = await Promise.all(
+          shapUrls.map(u => fetch(u).then(r => {
+            if (!r.ok) throw new Error(`${u} → HTTP ${r.status}`);
+            return r.json();
+          }))
+        );
         setShapData({ adm_importance: admImp, adm_waterfall: admWat, readm_importance: readmImp, readm_waterfall: readmWat });
       } catch (err) {
         console.error("Failed to load native SHAP extractions:", err);
+        setShapError(err.message || String(err));
       }
     };
-    fetchShap();
+    fetchAll();
   }, []);
 
   // Strict dataset filter before processing mapping rules.
@@ -57,7 +65,7 @@ export default function EDAView({ data }) {
       totalRisk += (d.Stage_1_Admission_Risk || 0);
       if (d.Predicted_Admission === 1) {
         admittedCount++;
-        if (d.Stage_2_Readmission_Risk !== null && d.Stage_2_Readmission_Risk >= 0.5) {
+        if (d.Stage_2_Readmission_Risk !== null && d.Stage_2_Readmission_Risk >= thresholds.readmission) {
           readmittedCount++;
         }
       }
@@ -68,7 +76,7 @@ export default function EDAView({ data }) {
       readmitRate: admittedCount > 0 ? (readmittedCount / admittedCount) * 100 : 0,
       totalAdmitted: admittedCount
     };
-  }, [filteredData]);
+  }, [filteredData, thresholds]);
 
   // Aggregate Age vs Avg Admission Risk for Top Recharts Area
   const ageRiskData = useMemo(() => {
@@ -240,7 +248,23 @@ export default function EDAView({ data }) {
       </div>
 
       <div style={{ padding: '3rem' }}>
-        
+
+        {shapError && (
+          <div
+            role="alert"
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.75rem',
+              background: 'var(--danger-container)', color: 'var(--danger)',
+              padding: '1rem 1.25rem', borderRadius: '0.75rem',
+              border: '1px solid var(--danger)', marginBottom: '2rem',
+              fontSize: '0.9rem', fontWeight: 500
+            }}
+          >
+            <AlertTriangle size={18} />
+            <span>SHAP extractions failed to load: {shapError}. Re-run <code>export_shap_plots.py</code> to regenerate the JSONs.</span>
+          </div>
+        )}
+
         {/* Landing Top Metrics */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginBottom: '3rem' }}>
           

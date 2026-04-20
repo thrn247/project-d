@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { ChevronDown, ChevronUp, AlertCircle, TrendingUp, Activity, ChevronLeft, ChevronRight, Search, Download, LayoutGrid, List } from 'lucide-react';
 import PatientSlideOut from './PatientSlideOut';
 
-export default function PredictionsDirectory({ data }) {
+export default function PredictionsDirectory({ data, thresholds }) {
   const [filter, setFilter] = useState('All');
   const [sortField, setSortField] = useState('Stage_1_Admission_Risk');
   const [sortDesc, setSortDesc] = useState(true);
@@ -143,14 +143,14 @@ export default function PredictionsDirectory({ data }) {
               <div style={{ margin: '1.5rem 0', display: 'flex', justifyContent: 'center', gap: '2rem' }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Admit Risk</div>
-                  <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : 'var(--text-main)' }}>
+                  <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_1_Admission_Risk >= thresholds.admission ? 'var(--danger)' : 'var(--text-main)' }}>
                     {(patient.Stage_1_Admission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
                   </div>
                 </div>
                 {patient.Stage_2_Readmission_Risk !== null && (
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Readmit Risk</div>
-                    <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>
+                    <div className="display-num" style={{ fontSize: '2rem', color: patient.Stage_2_Readmission_Risk >= thresholds.readmission ? 'var(--warning)' : 'var(--text-main)' }}>
                       {(patient.Stage_2_Readmission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
                     </div>
                   </div>
@@ -315,7 +315,7 @@ export default function PredictionsDirectory({ data }) {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       {patient.Stage_2_Readmission_Risk !== null ? (
-                        <span className="display-num" style={{ color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>
+                        <span className="display-num" style={{ color: patient.Stage_2_Readmission_Risk >= thresholds.readmission ? 'var(--warning)' : 'var(--text-main)' }}>
                            {(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%
                         </span>
                       ) : (
@@ -387,10 +387,11 @@ export default function PredictionsDirectory({ data }) {
         )}
       </div>
 
-      <PatientSlideOut 
-        patient={selectedPatient} 
-        isOpen={isSlideOpen} 
-        onClose={() => setIsSlideOpen(false)} 
+      <PatientSlideOut
+        patient={selectedPatient}
+        isOpen={isSlideOpen}
+        onClose={() => setIsSlideOpen(false)}
+        thresholds={thresholds}
       />
     </>
   );

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { X, User, Activity, AlertCircle, FileText, HeartPulse } from 'lucide-react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell, AreaChart, Area } from 'recharts';
 
-export default function PatientSlideOut({ patient, isOpen, onClose }) {
+export default function PatientSlideOut({ patient, isOpen, onClose, thresholds }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -12,6 +12,14 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
       setTimeout(() => setMounted(false), 300); // Wait for transition
     }
   }, [isOpen]);
+
+  // Close on Escape — expected keyboard behavior for any modal/slideout.
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
 
   if (!mounted && !isOpen) return null;
 
@@ -41,11 +49,17 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
 
   return (
     <>
-      <div 
-        className={`slide-backdrop ${isOpen ? 'open' : ''}`} 
+      <div
+        className={`slide-backdrop ${isOpen ? 'open' : ''}`}
         onClick={onClose}
+        aria-hidden="true"
       />
-      <div className={`slide-panel ${isOpen ? 'open' : ''}`}>
+      <div
+        className={`slide-panel ${isOpen ? 'open' : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={patient ? `Patient record ${patient.Patient_ID}` : 'Patient record'}
+      >
         <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
              Patient Record
@@ -111,7 +125,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                   <span className="label">Admission Risk</span>
                   <Activity size={16} color="var(--primary)" />
                 </div>
-                <div className="value" style={{ color: patient.Stage_1_Admission_Risk > 0.5 ? 'var(--danger)' : 'var(--text-main)' }}>
+                <div className="value" style={{ color: patient.Stage_1_Admission_Risk >= thresholds.admission ? 'var(--danger)' : 'var(--text-main)' }}>
                   {(patient.Stage_1_Admission_Risk * 100).toFixed(1)}%
                 </div>
               </div>
@@ -123,7 +137,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose }) {
                 </div>
                 <div className="value">
                   {patient.Stage_2_Readmission_Risk !== null ? 
-                    <span style={{ color: patient.Stage_2_Readmission_Risk > 0.5 ? 'var(--warning)' : 'var(--text-main)' }}>{(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%</span> : 
+                    <span style={{ color: patient.Stage_2_Readmission_Risk >= thresholds.readmission ? 'var(--warning)' : 'var(--text-main)' }}>{(patient.Stage_2_Readmission_Risk * 100).toFixed(1)}%</span> : 
                     <span style={{ fontSize: '1rem', fontWeight: '400', color: 'var(--text-muted)' }}>N/A</span>
                   }
                 </div>
