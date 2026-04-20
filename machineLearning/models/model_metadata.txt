@@ -1,8 +1,8 @@
-Training Date: 2026-03-02 10:41:01
+Training Date: 2026-04-21 02:38:26.284591
 Training Set Size: 49708
 Test Set Size: 12427
-Number of Features: 14
+Number of Features: 22
 Target Variable: Admitted_Yes_No
 Class Imbalance Ratio: 1:6.77
-Hyperparameter Tuning: GridSearchCV with StratifiedKFold (5 folds)
-Models Trained: ['Logistic Regression', 'Random Forest', 'XGBoost']
+Hyperparameter Tuning: GridSearchCV (LR) + RandomizedSearchCV n_iter=10 (RF, XGB), StratifiedKFold(3)
+Learned Thresholds (admission): LR=0.6199 RF=0.6247 XGB=0.6873
