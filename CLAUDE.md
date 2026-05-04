@@ -8,7 +8,9 @@
 
 **Owner:** Thiranbarath (student ID `00000042906`), IMU University, Bachelor in Digital Health (Hons), final-year capstone `BDH2372 Research Project II`.
 
-**One-line purpose:** Develop, interpret, and surface XGBoost-based risk scores for (A) initial hospital admission and (B) 30-day-style readmission in Malaysian Type-2 diabetes patients, using a real-world PMCare Third-Party-Administrator claims extract, and expose the results through a React expert-review dashboard for formative usability evaluation.
+**One-line purpose:** Develop, interpret, and surface XGBoost-based risk scores for (A) initial hospital admission and (B) all-cause recurrent inpatient admission ("readmission") in Malaysian Type-2 diabetes patients, using a real-world PMCare Third-Party-Administrator claims extract, and expose the results through a React expert-review dashboard for formative usability evaluation.
+
+> **Target definition note (important):** `Readmitted_Yes_No = (Num_Admissions > 1)` flags any patient with two or more inpatient admissions across the data window. This is **not** the standard 30-day readmission window used by UCI / LACE / MIMIC-III studies. Internally coherent, but every literature comparison must say so explicitly — see §8 and §13.
 
 **Repo:** `github.com/thrn247/project-d`
 **Live dashboard:** `https://projectd-theta.vercel.app`
@@ -172,7 +174,7 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 | Random Forest | 0.6247 | 0.46 | 0.54 | 0.50 | 0.8590 | 0.5158 |
 | **XGBoost (champion)** | **0.6873** | **0.45** | **0.57** | **0.51** | **0.8648** | **0.5344** |
 
-- **Top SHAP drivers:** `Total_Unique_Diagnoses`, `COMP_DIABETIC_FOOT`, `Total_Meds_Count`, `Num_Visits`, `AGE`.
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `SEX_M`.
 
 ### 5.3 `03_ML_Model_Readmission.ipynb` — **Track B**
 - **Filter first:** `df_admitted = df[df.Admitted_Yes_No == 1]` → 7,999 patients.
@@ -192,7 +194,7 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 | XGBoost (no Avg_LOS ablation) | 0.3128 | 0.53 | 0.74 | 0.62 | **0.8131** | **0.6046** |
 
 - **Ablation Δ (with vs without `Avg_LOS`):** ROC-AUC +0.0626, PR-AUC +0.1583 → over the 0.05 gate → Avg_LOS carries temporal-leakage signal. Both headline and honest-alternative numbers should appear in the capstone (§11).
-- **Top SHAP drivers:** `Total_Unique_Diagnoses`, `Avg_LOS`, `COMP_RETINOPATHY`, `COMP_NEPHROPATHY`, `AGE`.
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Avg_LOS`, `AGE`, `Total_Meds_Count`.
 
 ### 5.4 `models/thresholds.json` — the single threshold source of truth
 Written by both admission and readmission notebooks; they read-merge-write so neither clobbers the other's keys. `build_export.py` consumes this for gating predictions; a slim `{admission, readmission}` copy is mirrored to `diabetesDashboard/public/data/thresholds.json` for the React app. Current keys:
@@ -249,7 +251,7 @@ main.jsx
   Avg_LOS: number,
   Total_Unique_Diagnoses: number,
   Stage_1_Admission_Risk: number,   // 0..1
-  Predicted_Admission: 0 | 1,       // derived using threshold = 0.35
+  Predicted_Admission: 0 | 1,       // derived using thresholds["xgb_admission"] (0.6873) loaded from thresholds.json
   Stage_2_Readmission_Risk: number | null,  // null when Predicted_Admission == 0
   Top_Risk_Drivers: string[]        // ["COMP_NEPHROPATHY (+40.5%)", ...] — top 3 positive
 }
@@ -278,7 +280,7 @@ main.jsx
 }
 ```
 
-### 6.6 `EDAView.jsx` (462 lines)
+### 6.6 `EDAView.jsx` (~486 lines)
 - **State:** `filterGender`, `filterSeverity`, `activeAdmTab` / `activeReadmTab` ('beeswarm' | 'waterfall'), `shapData` (loaded once on mount from the 4 SHAP JSON files).
 - **Derived via `useMemo`:**
   - `filteredData` — applies gender + severity filters to `data` prop.
@@ -288,19 +290,19 @@ main.jsx
   - `losRiskData` — mean `Avg_LOS` per Severity level (Mild/Moderate/Severe).
 - **Renders:** global filter bar → 3 KPI cards → 3 Recharts (AreaChart for age, vertical BarChart for drivers, BarChart for LOS) → 2 SHAP panels (admission + readmission) each with a toggle between the global importance chart and the waterfall.
 
-### 6.7 `PredictionsDirectory.jsx` (397 lines)
+### 6.7 `PredictionsDirectory.jsx` (~398 lines)
 - **State:** `filter` (severity tab), `sortField` / `sortDesc`, `searchQuery`, `selectedPatient` / `isSlideOpen`, `viewMode` ('table' | 'grid'), `currentPage` (paginated at 50/page).
 - **Table view:** sortable columns (ID, Severity, Stage 1, Stage 2), primary driver badge, click-to-open slideout.
 - **Grid view:** top 20 cards only (explicit cap — `gridItems.slice(0, 20)`).
 - **CSV export:** pulls all filtered records (not just the current page), filename `cohort_export_<filter>_sortedBy_<field>.csv`.
 
-### 6.8 `PatientSlideOut.jsx` (181 lines)
+### 6.8 `PatientSlideOut.jsx` (~195 lines)
 - Right-side drawer with: profile header, a 3-point "Risk Pulse Timeline" sparkline (Baseline 0% → Stage 1 → Stage 2), two risk-tile KPIs, and a horizontal bar chart of the top-3 drivers with the SHAP % impact.
 - Accepts `patient`, `isOpen`, `onClose` props only — stateless beyond its mount/unmount animation.
 
 ### 6.9 Styling
 - `index.css` defines a light-mode-only design system (`--bg-dark`, `--bg-card`, `--primary: #0284c7`, `--danger: #e11d48`, `--warning: #d97706`, `--success: #059669`). ⚠ The `--bg-dark` variable name is a legacy from the removed dark mode — it now refers to `#f0f4f8` (a light gray). Don't rename without a global sweep.
-- `App.css` is largely legacy Vite template code — safe to delete once confirmed unused.
+- The `App.css` Vite template was deleted in the reproducibility sweep — only `index.css` remains.
 
 ---
 
@@ -339,23 +341,29 @@ main.jsx
 
 Current stage: **Testing & Validation** (Apr 2026) → **Interface Development** (Apr–May 2026) → **Final Report** (May 2026).
 
-### Critical pre-submission work items
-1. ~~**`Avg_LOS` temporal-leakage ablation**~~ — **DONE 2026-04-21**. Result in §11.
+### Open work items
+1. **Frontend polish** — design / styling pass on the React dashboard. User parked this task on 2026-04-21; pick up in the next session. Backend (data pipeline, ML, payload, threshold wiring) is shipped.
 2. **O4 usability study** — 5–10 experts, protocol in §3.7 of the research proposal. Produce:
    - Consent script + participant info sheet (IMU ethics)
    - Task sheet (3 structured tasks)
    - Post-task questionnaire (usefulness, clarity, trust — 5-pt Likert)
    - Think-aloud transcript template
    - Thematic synthesis
-3. ~~**Reproducibility sweep**~~ — **DONE 2026-04-21**. Audit table in §10 now empty.
-4. **Final report write-up** — methods, results, limitations, future work. 10-study lit comparison table is already in the research proposal. Must surface both Track B numbers (full + no-LOS) per §11.
-5. ~~**README.md at repo root**~~ — **DONE 2026-04-21**, see [README.md](README.md).
+3. **Final report write-up** — methods, results, limitations, future work. 10-study lit comparison table is already in the research proposal. Must surface both Track B numbers (full + no-LOS) per §11, and frame the readmission target per §1's note + §13.
+
+### Already shipped (no action needed)
+- Reproducibility sweep + retrain on 22-feature pipeline + train-learned thresholds (2026-04-21).
+- `Avg_LOS` temporal-leakage ablation (§11).
+- Top-level `README.md`.
+- Portable `base_path` across every notebook + script.
+- Notebook docstring polish (`### Step N:` consistency, no placeholder text).
 
 ### Nice-to-haves (if time allows)
 - CLI entry point wrapping `build_export.py` + `export_shap_plots.py` as a single `make dashboard` command.
 - Unit tests on the preprocessing logic (especially `SEVERITY_INDEX` rules and `Readmitted_Yes_No` derivation).
-- Parameterize `base_path` via a `.env` to make the pipeline portable off the Windows machine.
 - Replace the 18.9 MB `dashboard_payload.json` with a server-side paginated endpoint (future deployment consideration).
+- Probability calibration on the dashboard scores (see §13).
+- Bootstrapped 95% CIs on the headline AUCs (see §13).
 
 ---
 
@@ -415,9 +423,43 @@ All seven items from the original audit have been closed. Retained here for hist
 **When in doubt:**
 - The canonical severity source is `ml_ready_dataset.csv.Severity_Encoded`, mapped via `{0: Mild, 1: Moderate, 2: Severe}`.
 - The canonical payload builder is `diabetesDashboard/scripts/build_export.py`.
-- The canonical Track B threshold is `0.3471` (XGBoost optimal) — everything else is either legacy or a dashboard display heuristic.
+- The canonical Track B threshold is `0.3394` (XGBoost optimal, train-learned) — everything else is either legacy or a dashboard display heuristic. The companion no-LOS ablation threshold is `0.3128`.
 - Dataset size assertions: 62,135 patients, 7,999 admitted, 2,228 readmitted globally — any deviation after a pipeline re-run is a red flag.
 
 ---
 
-*Last updated: 2026-04-21 (post-reproducibility-sweep + Avg_LOS ablation + notebook docstring polish: every pipeline notebook now uses a consistent `### Step N:` header style with real descriptions, no placeholder text). Maintained alongside the `BDH2372 Research Project II` submission.*
+## 13. Known pipeline limitations (cite in Limitations / Future Work)
+
+Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; Tier 2 = footnote in the writeup.
+
+### Tier 1 — substantive
+
+1. **`Avg_LOS` temporal leakage in Track B headline.** Documented + ablation already done (§11). Headline 0.8757 is mitigated by also publishing 0.8131; the *fix* (recompute LOS using only pre-index claims) is queued as Future Work.
+2. **Target ≠ standard 30-day readmission.** Per §1, `Readmitted_Yes_No = Num_Admissions > 1` is all-cause recurrent admission, not a 30-day window. AUC comparisons against UCI/LACE/MIMIC-III need an explicit "different target definition" caveat.
+3. **No probability calibration.** Dashboard surfaces `Stage_1_Admission_Risk` as a percentage but the underlying XGBoost score is uncalibrated. A `CalibratedClassifierCV` wrap + reliability diagram would close this.
+4. **No confidence intervals on AUCs.** Single 80/20 split → point estimates only. No bootstrap, no nested CV, no seed-robustness check.
+5. **No external or temporal validation.** Train and test from the same TPA, same population, same window.
+
+### Tier 2 — methodology footnotes
+
+6. `Num_Visits` retained in Track A. Partially correlates with the admission target (every admitted patient generates inpatient claims that count toward visits).
+7. Track A hyperparameter search budget is small (`n_iter=10`); Track B uses `n_iter=30`. Inconsistent.
+8. F1-max threshold ignores cost asymmetry (false negatives are typically costlier than false positives in clinical risk-flagging).
+9. Track A positive-class precision = 0.45 — 55% of "will-be-admitted" predictions are wrong at the operating threshold. Real number, needs explicit acknowledgement in dashboard usability framing.
+10. Severity index is a clinically-motivated heuristic (insulin → Severe, biguanide-only → Mild) not validated against HbA1c / Charlson.
+11. Description-to-ICD mapping is exact-string-match — silent misses on casing/wording variants.
+12. Provider blacklist (`SUPP343 / PHAR455 / PHAR588 / KPJ036`) is hardcoded with no documented rationale beyond "pharmacy/supplier".
+13. `Avg_LOS = mean(LOS)` across all claim types — outpatient claims with LOS=0 dilute the inpatient signal.
+14. No requirements.txt / lockfile, no unit tests on `SEVERITY_INDEX` or `Readmitted_Yes_No` derivation, no subgroup performance breakdown.
+
+### NOT flaws (common pushbacks worth pre-empting)
+
+- Threshold learned on TRAIN, applied to TEST → methodologically correct.
+- `scale_pos_weight` (XGB) / `class_weight='balanced'` (LR, RF) → standard imbalance handling.
+- 22-feature pipeline → synced between notebook, scaler, and dashboard.
+- Stratified 80/20 split + 3-fold CV on the search → standard practice.
+- Three-model bake-off → appropriate scope for dataset size and capstone level.
+
+---
+
+*Last updated: 2026-05-04 (CLAUDE.md cleanup: corrected stale SHAP drivers, fixed `Predicted_Admission` derivation comment, fixed canonical Track B threshold `0.3471 → 0.3394`, removed shipped roadmap items, added §13 known-flaws inventory). Maintained alongside the `BDH2372 Research Project II` submission.*
