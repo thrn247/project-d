@@ -77,11 +77,17 @@ readm_risk = xgb_readmission.predict_proba(X_readm_final)[:, 1]
 readm_risk = np.where(adm_pred == 1, readm_risk, np.nan)
 print(f"Readmission processing done in {time.time()-start_time:.1f}s")
 
-print("Phase 3: Deep SHAP Parsing for full dataset (this may take 1-3 minutes)...")
+print("Phase 3a: Admission SHAP for full dataset (this may take 1-3 minutes)...")
 start_time = time.time()
 explainer_adm = shap.TreeExplainer(xgb_admission)
 shap_values_adm = explainer_adm.shap_values(X_adm_final)
-print(f"SHAP calculations finished in {time.time()-start_time:.1f}s")
+print(f"Admission SHAP calculations finished in {time.time()-start_time:.1f}s")
+
+print("Phase 3b: Readmission SHAP for full dataset...")
+start_time = time.time()
+explainer_readm = shap.TreeExplainer(xgb_readmission)
+shap_values_readm = explainer_readm.shap_values(X_readm_final)
+print(f"Readmission SHAP calculations finished in {time.time()-start_time:.1f}s")
 
 def get_top_features_fast(patient_idx, shap_vals, feature_names):
     contributions = shap_vals[patient_idx]
@@ -98,6 +104,7 @@ print("Assembling the massive JSON payload...")
 start_time = time.time()
 payload = []
 feature_names = X_adm_final.columns.tolist()
+feature_names_readm = X_readm_final.columns.tolist()
 
 severity_map = {0: 'Mild', 1: 'Moderate', 2: 'Severe'}
 severity_col = df_ml['Severity_Encoded'].values
@@ -111,6 +118,13 @@ for idx in range(len(df_patient)):
     severity_str = severity_map.get(encoded_sev, 'Unknown')
 
     top_drivers = get_top_features_fast(idx, shap_values_adm, feature_names)
+    # Per-patient readmission drivers — only meaningful when the patient was flagged
+    # for admission. Otherwise the Stage 2 score is masked to NaN and we emit null.
+    top_readm_drivers = (
+        get_top_features_fast(idx, shap_values_readm, feature_names_readm)
+        if adm_pred[idx] == 1
+        else None
+    )
 
     avg_los = float(df_ml.loc[idx, 'Avg_LOS']) if 'Avg_LOS' in df_ml.columns else 0.0
     total_dx = int(df_ml.loc[idx, 'Total_Unique_Diagnoses']) if 'Total_Unique_Diagnoses' in df_ml.columns else 0
@@ -125,7 +139,8 @@ for idx in range(len(df_patient)):
         'Stage_1_Admission_Risk': float(adm_risk[idx]),
         'Predicted_Admission': int(adm_pred[idx]),
         'Stage_2_Readmission_Risk': float(readm_risk[idx]) if not np.isnan(readm_risk[idx]) else None,
-        'Top_Risk_Drivers': top_drivers
+        'Top_Risk_Drivers': top_drivers,
+        'Top_Readmission_Drivers': top_readm_drivers,
     }
     payload.append(record)
 

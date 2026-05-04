@@ -184,6 +184,25 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   transform: scale(1.002);
 }
 
+/* Keyboard focus rings — applied only when navigating via keyboard, not on mouse click. */
+.data-grid tbody tr:focus { outline: none; }
+.data-grid tbody tr:focus-visible td {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: var(--bg-surface-high);
+}
+.data-grid th:focus { outline: none; }
+.data-grid th:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.patient-card:focus { outline: none; }
+.patient-card:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 /* Action Buttons (Primary Gradient) */
 .btn-primary {
   background: linear-gradient(135deg, var(--primary), var(--primary-container));
