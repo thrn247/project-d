@@ -240,7 +240,7 @@ main.jsx
 ```
 
 ### 6.3 `dashboard_payload.json` contract
-**18.9 MB**, 62,135 records, pre-sorted descending by `Stage_1_Admission_Risk`. Each record:
+**~22 MB**, 62,135 records, pre-sorted descending by `Stage_1_Admission_Risk`. Each record (11 fields):
 
 ```ts
 {
@@ -253,10 +253,11 @@ main.jsx
   Stage_1_Admission_Risk: number,   // 0..1
   Predicted_Admission: 0 | 1,       // derived using thresholds["xgb_admission"] (0.6873) loaded from thresholds.json
   Stage_2_Readmission_Risk: number | null,  // null when Predicted_Admission == 0
-  Top_Risk_Drivers: string[]        // ["COMP_NEPHROPATHY (+40.5%)", ...] — top 3 positive
+  Top_Risk_Drivers: string[],       // ["COMP_NEPHROPATHY (+40.5%)", ...] — top 3 positive admission SHAP drivers
+  Top_Readmission_Drivers: string[] | null  // top 3 positive readmission SHAP drivers; null when Predicted_Admission == 0
 }
 ```
-`Top_Risk_Drivers` strings are parsed in React via `driver.split(' (+')[0]` to get feature name and `parseFloat(parts[1].replace('%)', ''))` to get impact magnitude — **do not change this format** without updating `EDAView.jsx` (line ~110), `PredictionsDirectory.jsx` (line ~160), and `PatientSlideOut.jsx` (line ~22).
+`Top_Risk_Drivers` and `Top_Readmission_Drivers` strings share the format `"FEATURE_NAME (+XX.X%)"`. They're parsed in React via `driver.split(' (+')[0]` to get the feature name and `parseFloat(parts[1].replace('%)', ''))` to get the impact magnitude — **do not change this format** without updating the React parsers ([EDAView.jsx](diabetesDashboard/src/components/EDAView.jsx), [PredictionsDirectory.jsx](diabetesDashboard/src/components/PredictionsDirectory.jsx), [PatientSlideOut.jsx](diabetesDashboard/src/components/PatientSlideOut.jsx)). Technical feature names map to clinical labels via [diabetesDashboard/src/featureLabels.js](diabetesDashboard/src/featureLabels.js).
 
 ### 6.4 `scripts/build_export.py` — canonical payload builder
 - Loads `xgboost_admission.pkl`, `standard_scaler.pkl`, `feature_names.csv`, `xgboost_readmission.pkl`, `standard_scaler_readmission.pkl` from `machineLearning/models/`.
