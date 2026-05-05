@@ -41,7 +41,7 @@ project-d/
 **Data flow (left to right):**
 `parquet → step1_claims_filtered.xlsx → step2_claims_wide_format.xlsx → step3_claims_meds_and_comps.xlsx → step4_patient_aggregated.xlsx → ml_ready_dataset.csv → {trained pickles + scalers} → dashboard JSON payloads → React dashboard`
 
-**Anonymization:** `patient_id_key.xlsx` (committed) maps synthetic `Patient_ID` (P00001…P62135) back to the raw `PATIENT_CODE`. This is the only reverse-key in the repo.
+**Anonymization:** `patient_id_key.xlsx` (committed) maps synthetic `Patient_ID` (P00001…P61406) back to the raw `PATIENT_CODE`. This is the only reverse-key in the repo.
 
 ---
 
@@ -49,13 +49,14 @@ project-d/
 
 | Property | Value |
 |---|---|
-| Rows (patients) | **62,135** |
+| Rows (patients) | **61,406** |
 | Columns | **26** |
 | ICD-10 cohort filter | `E11.*` (Type-2 DM) |
-| Admitted (`Admitted_Yes_No == 1`) | **7,999** (12.87%) |
-| Readmitted (globally) | 2,228 |
-| Readmission rate among admitted | **27.85%** |
-| Severity: Mild/Moderate/Severe | 43,711 / 17,758 / 666 |
+| Age filter | `AGE >= 18` (added 2026-05-05; drops 728 patients with implausible source-data age, mostly the "missing → 0" encoding) |
+| Admitted (`Admitted_Yes_No == 1`) | **7,959** (12.96%) |
+| Readmitted (globally) | 2,214 |
+| Readmission rate among admitted | **27.82%** |
+| Severity: Mild/Moderate/Severe | 43,075 / 17,666 / 665 |
 
 **Feature families present in the ML-ready CSV:**
 - Numeric: `AGE`, `Avg_LOS`, `Num_Admissions`, `Num_Visits`, `Total_Meds_Count`, `Total_Unique_Diagnoses`, `Severity_Encoded`
@@ -81,6 +82,7 @@ All scripts assume the current working directory is `dataPreprocessing/source co
 - Input: `../parquet/e11_claims.parquet`
 - Output: `../csv/step1_claims_filtered.xlsx`
 - **Provider blacklist:** drops rows where `PROVIDER_CODE ∈ {"SUPP343", "PHAR455", "PHAR588", "KPJ036"}` (pharmacy/supplier records with no clinical encounter).
+- **Age filter:** drops claim-level rows with `AGE < 18`. Source parquet contains 22 patients with `AGE=0` (the TPA's "missing → 0" encoding) plus pediatric records that don't fit the T2DM cohort definition; the filter removes 1,213 claim-level rows and ~728 patient rows downstream.
 - **Columns dropped** (non-analytical / leakage / PII): `DIAGNOSIS_LMGROUP`, `RELATION`, `CLAIM_AMOUNT`, `APPROVE_AMOUNT`, `CLAIMANT_TYPE_CODE`, `TREATMENT_DETAIL_CODE`, `GL_CODE`, `BATCH_CODE`, `CLAIM_STATUS_CODE`, `SERVICE_TYPE_CODE`, `COMPANY_CODE`, `PROVIDER_CODE`, `DIAGNOSIS_DESCRIPTION`, `SERVICE_DATE`, `DISCHARGE_DATE`.
 - Critically **keeps `OTHER_DIAGNOSIS`** — required for the secondary-diagnosis pivot in step 2.
 
@@ -155,7 +157,7 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 - Encodes `SEVERITY_INDEX` → `Severity_Encoded` with `{Mild:0, Moderate:1, Severe:2}` and drops the text column.
 - Drops `Patient_ID` (leakage / identifier).
 - One-hot encodes `SEX` with `drop_first=True, dtype=int` → produces `SEX_M` (Male=1, Female=0).
-- Writes `machineLearning/csv/ml_ready_dataset.csv` (26 cols, 62,135 rows).
+- Writes `machineLearning/csv/ml_ready_dataset.csv` (26 cols, 61,406 rows).
 
 ### 5.2 `02_ML_Model_Admission.ipynb` — **Track A**
 - **Target:** `Admitted_Yes_No`
@@ -163,60 +165,60 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 - **Feature count:** **22** continuous/binary (after leakage drop). The frozen list is persisted to `models/feature_names.csv` for the batch-export script.
 - Stratified 80/20 split (`random_state=42`).
 - Scaling: `ColumnTransformer` — `StandardScaler` on continuous (`AGE, Num_Visits, Total_Meds_Count, Total_Unique_Diagnoses, Severity_Encoded`), passthrough on binary.
-- **Tuning:** `GridSearchCV` (LR) + `RandomizedSearchCV(n_iter=10, scoring='f1', cv=StratifiedKFold(3, shuffle=True, random_state=42))` for RF, XGB. Class imbalance: `class_weight='balanced'` for LR/RF, `scale_pos_weight = neg/pos ≈ 6.77` for XGB.
+- **Tuning:** `GridSearchCV` (LR) + `RandomizedSearchCV(n_iter=10, scoring='f1', cv=StratifiedKFold(3, shuffle=True, random_state=42))` for RF, XGB. Class imbalance: `class_weight='balanced'` for LR/RF, `scale_pos_weight = neg/pos ≈ 6.72` for XGB.
 - **Threshold optimization (corrected):** F1-max over the PR curve, **learned on the TRAIN set, applied to the TEST set** (no leakage — matches Track B pattern).
 - **Persisted artifacts** (written at the end of the notebook): `xgboost_admission.pkl`, `random_forest_admission.pkl`, `logistic_regression_admission.pkl`, `standard_scaler.pkl`, `feature_names.csv`, merged keys into `thresholds.json`, `model_metadata.txt`.
-- **Results** (retrained 2026-04-21 with 22 features + train-learned thresholds, positive class):
+- **Results** (retrained 2026-05-05 on the AGE>=18-filtered cohort, positive class):
 
 | Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|---|
-| Logistic Regression | 0.6199 | 0.44 | 0.58 | 0.50 | 0.8562 | 0.5031 |
-| Random Forest | 0.6247 | 0.46 | 0.54 | 0.50 | 0.8590 | 0.5158 |
-| **XGBoost (champion)** | **0.6873** | **0.45** | **0.57** | **0.51** | **0.8648** | **0.5344** |
+| Logistic Regression | 0.6204 | 0.44 | 0.59 | 0.50 | 0.8608 | 0.5098 |
+| Random Forest | 0.6663 | 0.49 | 0.52 | 0.50 | 0.8628 | 0.5175 |
+| **XGBoost (champion)** | **0.6923** | **0.47** | **0.57** | **0.51** | **0.8676** | **0.5348** |
 
-- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `SEX_M`.
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `Complication_Yes_No`.
 
 ### 5.3 `03_ML_Model_Readmission.ipynb` — **Track B**
-- **Filter first:** `df_admitted = df[df.Admitted_Yes_No == 1]` → 7,999 patients.
+- **Filter first:** `df_admitted = df[df.Admitted_Yes_No == 1]` → 7,959 patients.
 - **Target:** `Readmitted_Yes_No`
 - **Leakage dropped:** `Admitted_Yes_No`, `Num_Admissions`, `Num_Visits` (and `target`). `Avg_LOS` is retained as a clinical instability marker — **ablation confirms it carries temporal-leakage signal, see §11**.
 - Scaling: same pattern as Track A but continuous cols now include `Avg_LOS`.
 - **Tuning:** `GridSearchCV` for LR, `RandomizedSearchCV(n_iter=30)` for RF and XGB, CV as above, `scoring='f1'`. XGB does **not** use `scale_pos_weight` here (28% positive rate — less severe imbalance).
 - **Threshold optimization:** F1-max on TRAIN proba, applied to TEST. (Track A now mirrors this pattern.)
 - **Persisted:** `logistic_regression_readmission.pkl`, `random_forest_readmission.pkl`, `xgboost_readmission.pkl`, `standard_scaler_readmission.pkl`, merged keys into `thresholds.json` (including `xgb_readmission_noLOS`).
-- **Results** (retrained 2026-04-21, positive class):
+- **Results** (retrained 2026-05-05 on the AGE>=18-filtered cohort, positive class):
 
 | Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC |
 |---|---|---|---|---|---|---|
-| Logistic Regression | 0.2466 | 0.55 | 0.73 | 0.63 | 0.8220 | 0.6227 |
-| Random Forest | 0.3938 | 0.67 | 0.68 | 0.68 | 0.8696 | 0.7414 |
-| **XGBoost (champion)** | **0.3394** | **0.65** | **0.72** | **0.68** | **0.8757** | **0.7628** |
-| XGBoost (no Avg_LOS ablation) | 0.3128 | 0.53 | 0.74 | 0.62 | **0.8131** | **0.6046** |
+| Logistic Regression | 0.2388 | 0.51 | 0.74 | 0.61 | 0.8016 | 0.6029 |
+| Random Forest | 0.4559 | 0.67 | 0.64 | 0.65 | 0.8537 | 0.7125 |
+| **XGBoost (champion)** | **0.3476** | **0.62** | **0.73** | **0.67** | **0.8578** | **0.7347** |
+| XGBoost (no Avg_LOS ablation) | 0.3228 | 0.50 | 0.74 | 0.60 | **0.7938** | **0.5788** |
 
-- **Ablation Δ (with vs without `Avg_LOS`):** ROC-AUC +0.0626, PR-AUC +0.1583 → over the 0.05 gate → Avg_LOS carries temporal-leakage signal. Both headline and honest-alternative numbers should appear in the capstone (§11).
-- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Avg_LOS`, `AGE`, `Total_Meds_Count`.
+- **Ablation Δ (with vs without `Avg_LOS`):** ROC-AUC +0.0640, PR-AUC +0.1559 → over the 0.05 gate → Avg_LOS carries temporal-leakage signal. Both headline and honest-alternative numbers should appear in the capstone (§11).
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Avg_LOS`, `Total_Meds_Count`, `AGE`.
 
 ### 5.4 `models/thresholds.json` — the single threshold source of truth
 Written by both admission and readmission notebooks; they read-merge-write so neither clobbers the other's keys. `build_export.py` consumes this for gating predictions; a slim `{admission, readmission}` copy is mirrored to `diabetesDashboard/public/data/thresholds.json` for the React app. Current keys:
 ```json
 {
-  "lr_admission":   0.6199, "rf_admission":   0.6247, "xgb_admission":   0.6873,
-  "lr_readmission": 0.2466, "rf_readmission": 0.3938, "xgb_readmission": 0.3394,
-  "xgb_readmission_noLOS": 0.3128
+  "lr_admission":   0.6204, "rf_admission":   0.6663, "xgb_admission":   0.6923,
+  "lr_readmission": 0.2388, "rf_readmission": 0.4559, "xgb_readmission": 0.3476,
+  "xgb_readmission_noLOS": 0.3228
 }
 ```
 
 ### 5.5 `models/model_metadata.txt`
 Snapshot of the most recent Track A run:
 ```
-Training Date: 2026-04-21 02:38:26
-Training Set Size: 49708
-Test Set Size: 12427
+Training Date: 2026-05-05 19:19:34
+Training Set Size: 49124
+Test Set Size: 12282
 Number of Features: 22
 Target Variable: Admitted_Yes_No
-Class Imbalance Ratio: 1:6.77
+Class Imbalance Ratio: 1:6.72
 Hyperparameter Tuning: GridSearchCV (LR) + RandomizedSearchCV n_iter=10 (RF, XGB), StratifiedKFold(3)
-Learned Thresholds (admission): LR=0.6199 RF=0.6247 XGB=0.6873
+Learned Thresholds (admission): LR=0.6204 RF=0.6663 XGB=0.6923
 ```
 Metadata is regenerated automatically at the end of the admission notebook — keep it in sync on any retrain.
 

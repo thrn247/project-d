@@ -37,6 +37,14 @@ try:
     else:
         df_clean = df
 
+    # 3b. FILTER implausible AGE (T2DM cohort: adults only; source parquet has
+    # missing-encoded-as-0 records and a few negative ages that propagate into
+    # the model otherwise). Drops claim-level rows where AGE < 18.
+    if "AGE" in df_clean.columns:
+        before_age = len(df_clean)
+        df_clean = df_clean.filter(pl.col("AGE") >= 18)
+        print(f"Removed {before_age - len(df_clean)} claim-level rows with AGE < 18.")
+
     # 4. DROP (Keeping OTHER_DIAGNOSIS)
     existing_drops = [c for c in cols_to_drop if c in df_clean.columns]
     df_clean = df_clean.drop(existing_drops)
