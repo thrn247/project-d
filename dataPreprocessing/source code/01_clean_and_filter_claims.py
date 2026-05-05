@@ -9,14 +9,17 @@ output_path = os.path.join(base_dir, "csv", "step1_claims_filtered.xlsx")
 # Provider Blacklist
 provider_blacklist = ["SUPP343", "PHAR455", "PHAR588", "KPJ036"]
 
-# Columns to drop (maintaining OTHER_DIAGNOSIS)
+# Columns to drop (maintaining OTHER_DIAGNOSIS and SERVICE_DATE).
+# SERVICE_DATE is kept so step 4 can identify each patient's chronologically
+# first inpatient claim — required for the causally-clean Index_LOS feature
+# (replaces the old leaky Avg_LOS = mean across ALL claims).
 cols_to_drop = [
-    "DIAGNOSIS_LMGROUP", "RELATION", "CLAIM_AMOUNT", 
+    "DIAGNOSIS_LMGROUP", "RELATION", "CLAIM_AMOUNT",
     "APPROVE_AMOUNT", "CLAIMANT_TYPE_CODE", "TREATMENT_DETAIL_CODE",
-    "GL_CODE", "BATCH_CODE", "CLAIM_STATUS_CODE", 
-    "SERVICE_TYPE_CODE", "COMPANY_CODE", 
-    "PROVIDER_CODE", 
-    "DIAGNOSIS_DESCRIPTION", "SERVICE_DATE", "DISCHARGE_DATE"
+    "GL_CODE", "BATCH_CODE", "CLAIM_STATUS_CODE",
+    "SERVICE_TYPE_CODE", "COMPANY_CODE",
+    "PROVIDER_CODE",
+    "DIAGNOSIS_DESCRIPTION", "DISCHARGE_DATE"
 ]
 
 print("--- STEP 1: CLEANING (WITH OTHER_DIAGNOSIS KEPT) ---")

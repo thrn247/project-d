@@ -46,6 +46,17 @@ xgb_readmission = joblib.load(os.path.join(model_dir, 'xgboost_readmission.pkl')
 scaler_readmission = joblib.load(os.path.join(model_dir, 'standard_scaler_readmission.pkl'))
 fn_adm = pd.read_csv(os.path.join(model_dir, 'feature_names.csv'))['features'].tolist()
 
+# SHAP TreeExplainer doesn't accept CalibratedClassifierCV wrappers. Extract
+# one of the internal XGB sub-models for SHAP attribution. Calibration only
+# rescales probabilities; the tree-level feature contributions stay the same.
+def _xgb_for_shap(model):
+    if hasattr(model, 'calibrated_classifiers_'):
+        return model.calibrated_classifiers_[0].estimator
+    return model
+
+xgb_admission_for_shap = _xgb_for_shap(xgb_admission)
+xgb_readmission_for_shap = _xgb_for_shap(xgb_readmission)
+
 # Load canonical thresholds learned by the notebooks (train-optimized F1-max).
 # Keys: lr_admission / rf_admission / xgb_admission / lr_readmission / rf_readmission / xgb_readmission
 # The dashboard only consumes the XGBoost champions for both tracks.
@@ -81,7 +92,7 @@ print("Phase 2: Readmission Processing...")
 start_time = time.time()
 leakage_cols_readm = ['Admitted_Yes_No', 'Num_Admissions', 'Num_Visits', 'Readmitted_Yes_No']
 X_readm_raw = df_ml.drop(columns=[c for c in leakage_cols_readm if c in df_ml.columns], errors='ignore')
-continuous_cols_readm = ['AGE', 'Avg_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded']
+continuous_cols_readm = ['AGE', 'Index_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded']
 binary_cols_readm = [c for c in X_readm_raw.columns if c not in continuous_cols_readm]
 X_readm_scaled = scaler_readmission.transform(X_readm_raw)
 X_readm_final = pd.DataFrame(X_readm_scaled, columns=continuous_cols_readm + binary_cols_readm, index=X_readm_raw.index)
@@ -92,13 +103,13 @@ print(f"Readmission processing done in {time.time()-start_time:.1f}s")
 
 print("Phase 3a: Admission SHAP for full dataset (this may take 1-3 minutes)...")
 start_time = time.time()
-explainer_adm = shap.TreeExplainer(xgb_admission)
+explainer_adm = shap.TreeExplainer(xgb_admission_for_shap)
 shap_values_adm = explainer_adm.shap_values(X_adm_final)
 print(f"Admission SHAP calculations finished in {time.time()-start_time:.1f}s")
 
 print("Phase 3b: Readmission SHAP for full dataset...")
 start_time = time.time()
-explainer_readm = shap.TreeExplainer(xgb_readmission)
+explainer_readm = shap.TreeExplainer(xgb_readmission_for_shap)
 shap_values_readm = explainer_readm.shap_values(X_readm_final)
 print(f"Readmission SHAP calculations finished in {time.time()-start_time:.1f}s")
 
@@ -139,7 +150,7 @@ for idx in range(len(df_patient)):
         else None
     )
 
-    avg_los = float(df_ml.loc[idx, 'Avg_LOS']) if 'Avg_LOS' in df_ml.columns else 0.0
+    index_los = float(df_ml.loc[idx, 'Index_LOS']) if 'Index_LOS' in df_ml.columns else 0.0
     total_dx = int(df_ml.loc[idx, 'Total_Unique_Diagnoses']) if 'Total_Unique_Diagnoses' in df_ml.columns else 0
 
     record = {
@@ -147,7 +158,7 @@ for idx in range(len(df_patient)):
         'Age': age,
         'Sex': sex,
         'Severity': severity_str,
-        'Avg_LOS': avg_los,
+        'Index_LOS': index_los,
         'Total_Unique_Diagnoses': total_dx,
         'Stage_1_Admission_Risk': float(adm_risk[idx]),
         'Predicted_Admission': int(adm_pred[idx]),

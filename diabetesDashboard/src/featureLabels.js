@@ -4,7 +4,7 @@
 
 export const FEATURE_LABELS = {
   AGE: 'Age (years)',
-  Avg_LOS: 'Avg. length of inpatient stay (days)',
+  Index_LOS: 'Length of stay (index admission, days)',
   Total_Meds_Count: 'Number of medication classes',
   Total_Unique_Diagnoses: 'Number of distinct diagnoses',
   Severity_Encoded: 'Clinical severity score',
@@ -35,7 +35,7 @@ export const labelFor = (key) => FEATURE_LABELS[key] || key;
 // attributes; complications are listed as modifiable because progression can be
 // managed even when existing damage cannot be undone.
 export const MODIFIABLE_FEATURES = new Set([
-  'Avg_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded', 'Num_Visits',
+  'Index_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded', 'Num_Visits',
   'MED_ALPHA_GLUCOSIDE_INHIBITORS', 'MED_BIGUANIDE', 'MED_COMBINATION_DRUG',
   'MED_DPP_4_INHIBITORS', 'MED_GLP_1_RECEPTOR_AGONISTS', 'MED_INSULIN_THERAPY',
   'MED_MEGLITINIDES', 'MED_SGLT_2_INHIBITORS', 'MED_SULPHONYLUREAS', 'MED_THIAZOLIDINEDIONES',
@@ -58,7 +58,7 @@ export const formatFeatureValue = (key, value) => {
   if (key === 'AGE' || key === 'Num_Visits' || key === 'Total_Meds_Count' || key === 'Total_Unique_Diagnoses') {
     return String(Math.round(value));
   }
-  if (key === 'Avg_LOS') {
+  if (key === 'Index_LOS') {
     return `${Number(value).toFixed(1)} days`;
   }
   return typeof value === 'number' ? value.toFixed(2) : String(value);
