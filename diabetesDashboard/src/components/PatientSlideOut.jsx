@@ -105,6 +105,20 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
       .sort((a, b) => a - b);
   }, [data]);
 
+  // Cohort-baseline percentages used by the comparison block in the drivers
+  // section: what fraction of the relevant population the model flags positive.
+  const globalAdmissionFlaggedPct = useMemo(() => {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    return (data.filter(d => d.Predicted_Admission === 1).length / data.length) * 100;
+  }, [data]);
+
+  const globalReadmissionFlaggedPct = useMemo(() => {
+    if (!Array.isArray(data) || data.length === 0) return 0;
+    const admitted = data.filter(d => d.Stage_2_Readmission_Risk !== null && d.Stage_2_Readmission_Risk !== undefined);
+    if (admitted.length === 0) return 0;
+    return (admitted.filter(d => d.Stage_2_Readmission_Risk >= thresholds.readmission).length / admitted.length) * 100;
+  }, [data, thresholds]);
+
   // Escape to close + Tab focus trap. On open, snapshot the previously focused
   // element and move focus into the panel; on close, restore it.
   useEffect(() => {
@@ -291,6 +305,57 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
                 Readmission
               </button>
             </div>
+
+            {/* Cohort baseline comparison — answers "is this patient unusual?".
+                Hidden on the readmission tab when Stage 2 wasn't predicted. */}
+            {!(activeDriverTab === 'readmission' && readmissionUnavailable) && (() => {
+              const patientPct = activeDriverTab === 'admission'
+                ? admissionRisk * 100
+                : (readmissionRisk || 0) * 100;
+              const baselinePct = activeDriverTab === 'admission'
+                ? globalAdmissionFlaggedPct
+                : globalReadmissionFlaggedPct;
+              const delta = patientPct - baselinePct;
+              const above = delta >= 0;
+              return (
+                <div style={{
+                  background: 'var(--bg-card)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: '0.75rem',
+                  padding: '0.85rem 1rem',
+                  marginBottom: '1rem',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                        This patient
+                      </div>
+                      <div style={{ fontSize: '1.4rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: 'var(--text-main)' }}>
+                        {patientPct.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                        Cohort baseline
+                      </div>
+                      <div style={{ fontSize: '1.4rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: 'var(--text-muted)' }}>
+                        {baselinePct.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{
+                    marginTop: '0.6rem',
+                    paddingTop: '0.55rem',
+                    borderTop: '1px solid var(--border-light)',
+                    fontSize: '0.78rem',
+                    color: above ? 'var(--danger)' : 'var(--success)',
+                    fontWeight: 600,
+                  }}>
+                    {above ? '↑' : '↓'} {Math.abs(delta).toFixed(1)} points {above ? 'above' : 'below'} baseline
+                  </div>
+                </div>
+              );
+            })()}
 
             <div style={{ background: 'var(--bg-surface-high)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border-light)' }}>
               {activeDriverTab === 'readmission' && readmissionUnavailable ? (
