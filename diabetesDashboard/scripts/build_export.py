@@ -26,6 +26,19 @@ model_dir = os.path.join(base_path, 'machineLearning', 'models')
 df_ml = pd.read_csv(ml_data_path)
 df_patient = pd.read_excel(patient_data_path)
 
+# Defensive AGE>=18 guard — drops the cluster of patients where the source
+# parquet records age as 0 / pediatric ages (likely "missing → 0" encoding
+# from the TPA claims system). After Track B's upstream filter retrains,
+# this becomes a no-op since the dirty rows are already gone.
+# df_ml and df_patient are aligned by row index (01_ML_Data_Prep preserves
+# order), so we mask both with the same boolean.
+age_mask = df_patient['AGE'] >= 18
+dropped = int((~age_mask).sum())
+if dropped > 0:
+    print(f"AGE>=18 guard: dropping {dropped} patient(s) with implausible age.")
+df_patient = df_patient.loc[age_mask].reset_index(drop=True)
+df_ml = df_ml.loc[age_mask].reset_index(drop=True)
+
 print("Loading Models...")
 xgb_admission = joblib.load(os.path.join(model_dir, 'xgboost_admission.pkl'))
 scaler_admission = joblib.load(os.path.join(model_dir, 'standard_scaler.pkl'))
