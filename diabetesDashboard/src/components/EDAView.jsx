@@ -1,46 +1,13 @@
-import React, { useMemo, useEffect, useState, Fragment } from 'react';
+import React, { useMemo, Fragment } from 'react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 import { Activity, Users, AlertTriangle, TrendingUp, Filter, ShieldAlert, BarChart2, Search } from 'lucide-react';
 import InfoTip from './InfoTip';
 import FilterChips from './FilterChips';
-import { labelFor, formatFeatureValue } from '../featureLabels';
+import { labelFor } from '../featureLabels';
 import { TIPS } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
 
 export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToPredictions }) {
-  // SHAP plot tab state stays local — it's view-only, not a filter dimension.
-  const [activeAdmTab, setActiveAdmTab] = useState('beeswarm');
-  const [activeReadmTab, setActiveReadmTab] = useState('beeswarm');
-
-  const [shapData, setShapData] = useState({
-    adm_importance: [], adm_waterfall: null, readm_importance: [], readm_waterfall: null
-  });
-  const [shapError, setShapError] = useState(null);
-
-  useEffect(() => {
-    const fetchAll = async () => {
-      const shapUrls = [
-        '/data/shap_adm_importance.json',
-        '/data/shap_adm_waterfall.json',
-        '/data/shap_readm_importance.json',
-        '/data/shap_readm_waterfall.json'
-      ];
-      try {
-        const [admImp, admWat, readmImp, readmWat] = await Promise.all(
-          shapUrls.map(u => fetch(u).then(r => {
-            if (!r.ok) throw new Error(`${u} → HTTP ${r.status}`);
-            return r.json();
-          }))
-        );
-        setShapData({ adm_importance: admImp, adm_waterfall: admWat, readm_importance: readmImp, readm_waterfall: readmWat });
-      } catch (err) {
-        console.error("Failed to load native SHAP extractions:", err);
-        setShapError(err.message || String(err));
-      }
-    };
-    fetchAll();
-  }, []);
-
   // Fully-filtered data — used by KPIs, cohort drivers, drill-down count.
   const filteredData = useMemo(() => applyFilters(data, filters), [data, filters]);
 
@@ -196,65 +163,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
     }
   };
 
-  // SHAP renderers — translated to clinical labels via labelFor; waterfall annotated
-  // with each row's actual patient value via formatFeatureValue.
-  const renderImportanceChart = (rows) => {
-    const enriched = (rows || []).map(d => ({ ...d, label: labelFor(d.feature) }));
-    return (
-      <ResponsiveContainer width="100%" height={300}>
-        <BarChart data={enriched} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
-          <XAxis type="number" stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
-          <YAxis dataKey="label" type="category" width={170} tick={{ fill: 'var(--text-main)', fontSize: 10 }} axisLine={false} tickLine={false} />
-          <Tooltip
-            cursor={{ fill: 'rgba(120,120,120,0.05)' }}
-            contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-main)' }}
-            formatter={(val) => [val.toFixed(3), 'Avg. contribution to risk']}
-          />
-          <Bar dataKey="mean_shap" radius={[0, 4, 4, 0]} barSize={12} fill="var(--primary)" />
-        </BarChart>
-      </ResponsiveContainer>
-    );
-  };
-
-  const renderWaterfallChart = (payload) => {
-    if (!payload || !payload.data) return null;
-    const enriched = payload.data.map(d => ({
-      ...d,
-      displayName: `${labelFor(d.name)} (${formatFeatureValue(d.name, d.feature_value)})`
-    }));
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}>
-        <div style={{ padding: '0 1rem 1rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--text-muted)' }}>Cohort baseline: <strong style={{ color: 'var(--text-main)' }}>{(payload.base_value * 100).toFixed(1)}%</strong></span>
-          <span style={{ color: 'var(--text-muted)' }}>This patient: <strong style={{ color: 'var(--danger)' }}>{(payload.prediction * 100).toFixed(1)}%</strong></span>
-        </div>
-        <div style={{ flex: 1, minHeight: '260px' }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={enriched} layout="vertical" margin={{ top: 0, right: 30, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
-              <XAxis type="number" stroke="var(--text-muted)" fontSize={11} axisLine={false} tickLine={false} />
-              <YAxis dataKey="displayName" type="category" width={250} tick={{ fill: 'var(--text-main)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip
-                cursor={{ fill: 'rgba(120,120,120,0.05)' }}
-                contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-main)' }}
-                formatter={(val) => [
-                  `${val > 0 ? '+' : ''}${val.toFixed(3)} ${val > 0 ? '(increases risk)' : '(reduces risk)'}`,
-                  'Contribution'
-                ]}
-              />
-              <Bar dataKey="shap" radius={4} barSize={12}>
-                {enriched.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.shap > 0 ? 'var(--danger)' : 'var(--primary)'} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    );
-  };
-
   // Matrix cell colour — three-band heat scale anchored to existing palette tokens.
   const matrixCellBg = (avgRisk) => {
     if (avgRisk < 33) return 'var(--primary-container)';
@@ -322,13 +230,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           totalCount={filteredData.length}
           onJumpToPredictions={onJumpToPredictions}
         />
-
-        {shapError && (
-          <div role="alert" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'var(--danger-container)', color: 'var(--danger)', padding: '1rem 1.25rem', borderRadius: '0.75rem', border: '1px solid var(--danger)', marginBottom: '2rem', fontSize: '0.9rem', fontWeight: 500 }}>
-            <AlertTriangle size={18} />
-            <span>SHAP extractions failed to load: {shapError}. Re-run <code>export_shap_plots.py</code> to regenerate the JSONs.</span>
-          </div>
-        )}
 
         {filtersActive && filteredData.length > 0 && (
           <div style={{
@@ -653,94 +554,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
         </div>
 
         </>)}
-
-        <h2 style={{ paddingTop: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', marginBottom: '2.5rem' }}>
-          <Activity color="var(--danger)" size={24} /> Model Explanations (SHAP)
-        </h2>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '3rem', marginBottom: '4rem' }}>
-
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              Admission Model — Feature Impact
-              <InfoTip
-                text={activeAdmTab === 'beeswarm' ? TIPS.shap_admission_global.text : TIPS.shap_admission_patient.text}
-                detail={activeAdmTab === 'beeswarm' ? TIPS.shap_admission_global.detail : undefined}
-                size={14}
-              />
-            </h3>
-
-            <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
-              <button
-                onClick={() => setActiveAdmTab('beeswarm')}
-                style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
-              >
-                Cohort-wide Importance
-              </button>
-              <button
-                onClick={() => setActiveAdmTab('waterfall')}
-                style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeAdmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeAdmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeAdmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
-              >
-                Single Patient Breakdown
-              </button>
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
-              {shapData.adm_importance.length > 0 ? (
-                activeAdmTab === 'beeswarm'
-                  ? renderImportanceChart(shapData.adm_importance)
-                  : renderWaterfallChart(shapData.adm_waterfall)
-              ) : <Activity className="fast-spin" color="var(--primary)" size={24} />}
-            </div>
-
-            <p style={{ marginTop: '0.85rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              {activeAdmTab === 'beeswarm'
-                ? "These features had the strongest overall influence on the admission model's predictions across the sampled patients."
-                : "How each feature pushed THIS patient's risk up (red) or down (blue). Values in parentheses are the patient's actual recorded values."}
-            </p>
-          </div>
-
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)', display: 'flex', flexDirection: 'column' }}>
-            <h3 style={{ marginBottom: '1rem', color: 'var(--text-main)', fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              Readmission Model — Feature Impact
-              <InfoTip
-                text={activeReadmTab === 'beeswarm' ? TIPS.shap_readmission_global.text : TIPS.shap_readmission_patient.text}
-                detail={activeReadmTab === 'beeswarm' ? TIPS.shap_readmission_global.detail : undefined}
-                size={14}
-              />
-            </h3>
-
-            <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1.5rem' }}>
-              <button
-                onClick={() => setActiveReadmTab('beeswarm')}
-                style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'beeswarm' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'beeswarm' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'beeswarm' ? '600' : '500', transition: 'var(--transition)' }}
-              >
-                Cohort-wide Importance
-              </button>
-              <button
-                onClick={() => setActiveReadmTab('waterfall')}
-                style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeReadmTab === 'waterfall' ? 'var(--bg-surface-high)' : 'transparent', color: activeReadmTab === 'waterfall' ? '#fff' : 'var(--text-muted)', fontWeight: activeReadmTab === 'waterfall' ? '600' : '500', transition: 'var(--transition)' }}
-              >
-                Single Patient Breakdown
-              </button>
-            </div>
-
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-dark)', borderRadius: '0.75rem', padding: '1rem', border: '1px solid var(--border-light)' }}>
-              {shapData.readm_importance.length > 0 ? (
-                activeReadmTab === 'beeswarm'
-                  ? renderImportanceChart(shapData.readm_importance)
-                  : renderWaterfallChart(shapData.readm_waterfall)
-              ) : <Activity className="fast-spin" color="var(--primary)" size={24} />}
-            </div>
-
-            <p style={{ marginTop: '0.85rem', fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              {activeReadmTab === 'beeswarm'
-                ? "These features had the strongest overall influence on the readmission model's predictions across the sampled patients."
-                : "How each feature pushed THIS patient's readmission risk up (red) or down (blue). Values in parentheses are the patient's actual recorded values."}
-            </p>
-          </div>
-
-        </div>
 
       </div>
     </div>
