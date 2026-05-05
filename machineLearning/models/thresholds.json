@@ -1,9 +1,9 @@
 {
-  "lr_admission": 0.6198972962002957,
-  "rf_admission": 0.6246790815489311,
-  "xgb_admission": 0.6873234510421753,
-  "lr_readmission": 0.24659253001051806,
-  "rf_readmission": 0.3938116048252377,
-  "xgb_readmission": 0.33935311436653137,
-  "xgb_readmission_noLOS": 0.31284889578819275
+  "lr_admission": 0.6203952976360942,
+  "rf_admission": 0.6663182493559423,
+  "xgb_admission": 0.6923269033432007,
+  "lr_readmission": 0.23881776468672325,
+  "rf_readmission": 0.4559400364656715,
+  "xgb_readmission": 0.34763240814208984,
+  "xgb_readmission_noLOS": 0.32281652092933655
 }
