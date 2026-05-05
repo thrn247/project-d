@@ -26,6 +26,17 @@ scaler_admission = joblib.load(os.path.join(model_dir, 'standard_scaler.pkl'))
 xgb_readmission = joblib.load(os.path.join(model_dir, 'xgboost_readmission.pkl'))
 scaler_readmission = joblib.load(os.path.join(model_dir, 'standard_scaler_readmission.pkl'))
 
+# SHAP TreeExplainer doesn't accept CalibratedClassifierCV. Pull a sub-model
+# out for SHAP — calibration only affects probability magnitude, not the
+# tree-level feature contributions.
+def _xgb_for_shap(model):
+    if hasattr(model, 'calibrated_classifiers_'):
+        return model.calibrated_classifiers_[0].estimator
+    return model
+
+xgb_admission = _xgb_for_shap(xgb_admission)
+xgb_readmission = _xgb_for_shap(xgb_readmission)
+
 fn_adm = pd.read_csv(os.path.join(model_dir, 'feature_names.csv'))['features'].tolist()
 
 # Prepare Admission Data
@@ -38,7 +49,7 @@ X_adm_final = pd.DataFrame(X_adm_scaled, columns=continuous_cols_adm + binary_co
 # Prepare Readmission Data
 leakage_cols_readm = ['Admitted_Yes_No', 'Num_Admissions', 'Num_Visits', 'Readmitted_Yes_No']
 X_readm_raw = df_ml.drop(columns=[c for c in leakage_cols_readm if c in df_ml.columns], errors='ignore')
-continuous_cols_readm = ['AGE', 'Avg_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded']
+continuous_cols_readm = ['AGE', 'Index_LOS', 'Total_Meds_Count', 'Total_Unique_Diagnoses', 'Severity_Encoded']
 binary_cols_readm = [c for c in X_readm_raw.columns if c not in continuous_cols_readm]
 X_readm_scaled = scaler_readmission.transform(X_readm_raw)
 X_readm_final = pd.DataFrame(X_readm_scaled, columns=continuous_cols_readm + binary_cols_readm, index=X_readm_raw.index)

@@ -59,7 +59,7 @@ project-d/
 | Severity: Mild/Moderate/Severe | 43,075 / 17,666 / 665 |
 
 **Feature families present in the ML-ready CSV:**
-- Numeric: `AGE`, `Avg_LOS`, `Num_Admissions`, `Num_Visits`, `Total_Meds_Count`, `Total_Unique_Diagnoses`, `Severity_Encoded`
+- Numeric: `AGE`, `Index_LOS`, `Num_Admissions`, `Num_Visits`, `Total_Meds_Count`, `Total_Unique_Diagnoses`, `Severity_Encoded`
 - Medication flags (10): `MED_ALPHA_GLUCOSIDE_INHIBITORS`, `MED_BIGUANIDE`, `MED_COMBINATION_DRUG`, `MED_DPP_4_INHIBITORS`, `MED_GLP_1_RECEPTOR_AGONISTS`, `MED_INSULIN_THERAPY`, `MED_MEGLITINIDES`, `MED_SGLT_2_INHIBITORS`, `MED_SULPHONYLUREAS`, `MED_THIAZOLIDINEDIONES`
 - Complication flags (5): `COMP_DIABETIC_FOOT`, `COMP_MACROVASCULAR`, `COMP_NEPHROPATHY`, `COMP_NEUROPATHY`, `COMP_RETINOPATHY`
 - Demographic one-hot: `SEX_M`
@@ -105,7 +105,7 @@ All scripts assume the current working directory is `dataPreprocessing/source co
 - **Aggregation rules** (cell 3):
   - `SEX`: first
   - `AGE`: max (age at most recent visit)
-  - `LOS` → `Avg_LOS`: **mean** (⚠ see §11)
+  - `LOS` → `Index_LOS`: **LOS of the chronologically-first inpatient claim per patient** (sorted by `SERVICE_DATE`, taking the first IP claim's LOS). Causally prior to any subsequent admission, so safe as a Track B readmission predictor. Replaces the previous `mean(LOS) over ALL claims` definition that leaked the readmission encounter into the feature — see §11. Patients with zero IP claims get `Index_LOS = 0`.
   - `Is_IP` (derived from `"IP" in CLAIM_TYPE_CODE`) → `Num_Admissions`: sum
   - `CLAIM_CODE` → `Num_Visits`: count
   - All `MED_*` / `COMP_*`: max (patient-level presence)
@@ -161,66 +161,74 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 
 ### 5.2 `02_ML_Model_Admission.ipynb` — **Track A**
 - **Target:** `Admitted_Yes_No`
-- **Leakage columns dropped:** `Readmitted_Yes_No`, `Num_Admissions`, `Avg_LOS` (LOS only exists post-admission — cannot predict initial admission).
+- **Leakage columns dropped:** `Readmitted_Yes_No`, `Num_Admissions`, `Index_LOS` (LOS only exists post-admission — cannot predict initial admission).
 - **Feature count:** **22** continuous/binary (after leakage drop). The frozen list is persisted to `models/feature_names.csv` for the batch-export script.
 - Stratified 80/20 split (`random_state=42`).
 - Scaling: `ColumnTransformer` — `StandardScaler` on continuous (`AGE, Num_Visits, Total_Meds_Count, Total_Unique_Diagnoses, Severity_Encoded`), passthrough on binary.
 - **Tuning:** `GridSearchCV` (LR) + `RandomizedSearchCV(n_iter=10, scoring='f1', cv=StratifiedKFold(3, shuffle=True, random_state=42))` for RF, XGB. Class imbalance: `class_weight='balanced'` for LR/RF, `scale_pos_weight = neg/pos ≈ 6.72` for XGB.
 - **Threshold optimization (corrected):** F1-max over the PR curve, **learned on the TRAIN set, applied to the TEST set** (no leakage — matches Track B pattern).
 - **Persisted artifacts** (written at the end of the notebook): `xgboost_admission.pkl`, `random_forest_admission.pkl`, `logistic_regression_admission.pkl`, `standard_scaler.pkl`, `feature_names.csv`, merged keys into `thresholds.json`, `model_metadata.txt`.
-- **Results** (retrained 2026-05-05 on the AGE>=18-filtered cohort, positive class):
+- **Results** (retrained 2026-05-05 on the AGE>=18 cohort with `Index_LOS` replacing `Avg_LOS`; XGB champion is **isotonic-calibrated** via `CalibratedClassifierCV(cv=5)`, threshold learned on calibrated train probas. Positive class):
 
-| Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC |
-|---|---|---|---|---|---|---|
-| Logistic Regression | 0.6204 | 0.44 | 0.59 | 0.50 | 0.8608 | 0.5098 |
-| Random Forest | 0.6663 | 0.49 | 0.52 | 0.50 | 0.8628 | 0.5175 |
-| **XGBoost (champion)** | **0.6923** | **0.47** | **0.57** | **0.51** | **0.8676** | **0.5348** |
+| Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC | Brier |
+|---|---|---|---|---|---|---|---|
+| Logistic Regression | 0.6204 | 0.44 | 0.59 | 0.50 | 0.8608 | 0.5098 | — |
+| Random Forest | 0.6663 | 0.49 | 0.52 | 0.50 | 0.8628 | 0.5175 | — |
+| **XGBoost (champion, calibrated)** | **0.2832** | **0.49** | **0.53** | **0.51** | **0.8683** | **0.5386** | **0.0819** |
 
-- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `Complication_Yes_No`.
+LR and RF stay un-calibrated; only the XGB champion (consumed by the dashboard) gets the isotonic wrap. Calibration drops the Brier score from 0.1508 (uncalibrated) to 0.0819 — a 46% reduction, meaning the dashboard's percentage outputs now correspond meaningfully to empirical admission rates in the test set.
+
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `Complication_Yes_No`. SHAP runs on the underlying XGB sub-model extracted from the calibrated wrapper (`cal.calibrated_classifiers_[0].estimator`); calibration only re-scales probabilities, the tree-level feature contributions are unchanged.
 
 ### 5.3 `03_ML_Model_Readmission.ipynb` — **Track B**
 - **Filter first:** `df_admitted = df[df.Admitted_Yes_No == 1]` → 7,959 patients.
 - **Target:** `Readmitted_Yes_No`
-- **Leakage dropped:** `Admitted_Yes_No`, `Num_Admissions`, `Num_Visits` (and `target`). `Avg_LOS` is retained as a clinical instability marker — **ablation confirms it carries temporal-leakage signal, see §11**.
-- Scaling: same pattern as Track A but continuous cols now include `Avg_LOS`.
+- **Leakage dropped:** `Admitted_Yes_No`, `Num_Admissions`, `Num_Visits` (and `target`). `Index_LOS` is retained as a clinical instability marker — **ablation now confirms it is causally clean, see §11**.
+- Scaling: same pattern as Track A but continuous cols now include `Index_LOS`.
 - **Tuning:** `GridSearchCV` for LR, `RandomizedSearchCV(n_iter=30)` for RF and XGB, CV as above, `scoring='f1'`. XGB does **not** use `scale_pos_weight` here (28% positive rate — less severe imbalance).
 - **Threshold optimization:** F1-max on TRAIN proba, applied to TEST. (Track A now mirrors this pattern.)
-- **Persisted:** `logistic_regression_readmission.pkl`, `random_forest_readmission.pkl`, `xgboost_readmission.pkl`, `standard_scaler_readmission.pkl`, merged keys into `thresholds.json` (including `xgb_readmission_noLOS`).
-- **Results** (retrained 2026-05-05 on the AGE>=18-filtered cohort, positive class):
+- **Persisted:** `logistic_regression_readmission.pkl`, `random_forest_readmission.pkl`, `xgboost_readmission.pkl` (calibrated wrapper), `standard_scaler_readmission.pkl`, merged keys into `thresholds.json` (including `xgb_readmission_noLOS` for the leakage-gate ablation).
+- **Results** (retrained 2026-05-05 on the AGE>=18 cohort with `Index_LOS` replacing leaky `Avg_LOS`; XGB champion is **isotonic-calibrated** via `CalibratedClassifierCV(cv=5)`. Positive class):
 
-| Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC |
-|---|---|---|---|---|---|---|
-| Logistic Regression | 0.2388 | 0.51 | 0.74 | 0.61 | 0.8016 | 0.6029 |
-| Random Forest | 0.4559 | 0.67 | 0.64 | 0.65 | 0.8537 | 0.7125 |
-| **XGBoost (champion)** | **0.3476** | **0.62** | **0.73** | **0.67** | **0.8578** | **0.7347** |
-| XGBoost (no Avg_LOS ablation) | 0.3228 | 0.50 | 0.74 | 0.60 | **0.7938** | **0.5788** |
+| Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC | Brier |
+|---|---|---|---|---|---|---|---|
+| Logistic Regression | 0.1866 | 0.47 | 0.80 | 0.59 | 0.7871 | 0.5783 | — |
+| Random Forest | 0.4225 | 0.55 | 0.56 | 0.55 | 0.7905 | 0.5415 | — |
+| **XGBoost (champion, calibrated)** | **0.3648** | **0.53** | **0.67** | **0.59** | **0.7992** | **0.5850** | **0.1558** |
+| XGBoost (no Index_LOS ablation, uncalibrated) | 0.3537 | 0.51 | 0.64 | 0.57 | **0.7846** | **0.5604** | — |
 
-- **Ablation Δ (with vs without `Avg_LOS`):** ROC-AUC +0.0640, PR-AUC +0.1559 → over the 0.05 gate → Avg_LOS carries temporal-leakage signal. Both headline and honest-alternative numbers should appear in the capstone (§11).
-- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Avg_LOS`, `Total_Meds_Count`, `AGE`.
+- **Ablation Δ (with vs without `Index_LOS`):** ROC-AUC **+0.0120**, PR-AUC **+0.0180** → **well below the 0.05 leakage gate**. The previous `Avg_LOS` definition gave Δ ROC-AUC +0.0640 (over the gate); the redefinition to first-IP-LOS removes the leakage. Both headline and ablation numbers should appear in the capstone (§11).
+- **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Index_LOS`, `Total_Meds_Count`, `AGE`.
 
 ### 5.4 `models/thresholds.json` — the single threshold source of truth
 Written by both admission and readmission notebooks; they read-merge-write so neither clobbers the other's keys. `build_export.py` consumes this for gating predictions; a slim `{admission, readmission}` copy is mirrored to `diabetesDashboard/public/data/thresholds.json` for the React app. Current keys:
 ```json
 {
-  "lr_admission":   0.6204, "rf_admission":   0.6663, "xgb_admission":   0.6923,
-  "lr_readmission": 0.2388, "rf_readmission": 0.4559, "xgb_readmission": 0.3476,
-  "xgb_readmission_noLOS": 0.3228
+  "lr_admission":   0.6204, "rf_admission":   0.6663, "xgb_admission":   0.2832,
+  "lr_readmission": 0.1866, "rf_readmission": 0.4225, "xgb_readmission": 0.3648,
+  "xgb_readmission_noLOS": 0.3537
 }
 ```
+The two `xgb_*` thresholds are **calibrated** values (operate on the
+isotonic-calibrated probabilities); LR/RF and the no-LOS ablation key are
+uncalibrated. The slim `{admission, readmission}` mirror in
+`diabetesDashboard/public/data/thresholds.json` always carries the
+calibrated XGB values.
 
 ### 5.5 `models/model_metadata.txt`
-Snapshot of the most recent Track A run:
+Snapshot of the most recent Track A run (uncalibrated thresholds — calibrated XGB threshold lives in `thresholds.json` after `calibrate_models.py` runs):
 ```
-Training Date: 2026-05-05 19:19:34
+Training Date: 2026-05-05 20:07:38
 Training Set Size: 49124
 Test Set Size: 12282
 Number of Features: 22
 Target Variable: Admitted_Yes_No
 Class Imbalance Ratio: 1:6.72
 Hyperparameter Tuning: GridSearchCV (LR) + RandomizedSearchCV n_iter=10 (RF, XGB), StratifiedKFold(3)
-Learned Thresholds (admission): LR=0.6204 RF=0.6663 XGB=0.6923
+Learned Thresholds (admission, uncal): LR=0.6204 RF=0.6663 XGB=0.6923
+Calibrated XGB threshold (production): 0.2832
 ```
-Metadata is regenerated automatically at the end of the admission notebook — keep it in sync on any retrain.
+Metadata is regenerated automatically at the end of the admission notebook; the calibrated threshold is appended by `calibrate_models.py` afterwards.
 
 ---
 
@@ -250,7 +258,7 @@ main.jsx
   Age: number,
   Sex: string,                      // "M" | "F" | "U"
   Severity: "Mild" | "Moderate" | "Severe",
-  Avg_LOS: number,
+  Index_LOS: number,
   Total_Unique_Diagnoses: number,
   Stage_1_Admission_Risk: number,   // 0..1
   Predicted_Admission: 0 | 1,       // derived using thresholds["xgb_admission"] (0.6873) loaded from thresholds.json
@@ -390,22 +398,25 @@ All seven items from the original audit have been closed. Retained here for hist
 
 ---
 
-## 11. ⚠ The `Avg_LOS` temporal-validity question (READ THIS)
+## 11. ✅ The `Avg_LOS` → `Index_LOS` leakage fix (RESOLVED 2026-05-05)
 
-**Observed fact:** `Avg_LOS` is computed as the **mean LOS across all claims for a patient** in `04_aggregate_patients.ipynb`. In Track B it is then used as a feature to predict `Readmitted_Yes_No = (Num_Admissions > 1)`.
+**Original problem.** `Avg_LOS` was computed as `mean(LOS)` across **ALL** claims for a patient in `04_aggregate_patients.ipynb`. For Track B, where the target `Readmitted_Yes_No = (Num_Admissions > 1)` is met only by patients with 2+ inpatient claims, that mean **included the readmission encounter's LOS** — the feature partially measured the outcome. The original ablation showed a Δ ROC-AUC of +0.0626 (with leaky LOS) vs the no-LOS variant — comfortably over the 0.05 leakage gate.
 
-**The concern:** If `Avg_LOS` is computed using **all** claims including the readmission encounter itself, the feature partially encodes the outcome — this is temporal leakage. The headline ROC-AUC of 0.876 would then be optimistic.
+**Fix.** `Avg_LOS` was redefined to `Index_LOS` — the LOS of each patient's chronologically-first inpatient claim, identified via `SERVICE_DATE`. By construction this is causally **prior to** any subsequent admission, so it cannot encode the readmission event. `01_clean_and_filter_claims.py` was updated to retain `SERVICE_DATE` (previously dropped); `04_aggregate_patients.ipynb` was rewritten to compute `first_ip_los = ip_only.groupby("PATIENT_CODE")["LOS"].first()` and attach it as `Index_LOS`. Patients with no IP claim get 0.
 
-**Resolution (2026-04-21).** The ablation ran in the retrained Track B notebook. Result:
-- Full XGBoost (with `Avg_LOS`): ROC-AUC **0.8757**, PR-AUC **0.7628**
-- Ablated XGBoost (no `Avg_LOS`): ROC-AUC **0.8131**, PR-AUC **0.6046**
-- **Δ ROC-AUC = +0.0626** (over the 0.05 leakage gate), Δ PR-AUC = +0.1583
+**Post-fix ablation** (2026-05-05 retrain):
+- Full XGBoost (with `Index_LOS`): ROC-AUC **0.7966**, PR-AUC **0.5793** (uncalibrated)
+- Ablated XGBoost (no `Index_LOS`): ROC-AUC **0.7846**, PR-AUC **0.5604**
+- **Δ ROC-AUC = +0.0120** ← below the 0.05 leakage gate ✅
+- Δ PR-AUC = +0.0180
 
-**Decision — publish both numbers.** The production dashboard still uses the full model (higher sensitivity is clinically useful and the feature is real), but the final report must present both figures side-by-side in Results and explicitly call out the leakage risk in Limitations. `thresholds.json` retains `xgb_readmission_noLOS: 0.3128` for reproducibility.
+The notebook itself prints `✅ Δ ROC-AUC ≤ 0.05 — Index_LOS is not materially leaking; headline number stands.`
 
-**Future work.** The clinically-correct fix is temporal gating — recompute `Avg_LOS` in `04_aggregate_patients.ipynb` using only claims prior to the index admission, then retrain. Out of scope for this capstone submission; flagged in the report's Future Work section.
+**Probability calibration (2026-05-05).** As part of the same retrain, both XGB champions are now wrapped in `CalibratedClassifierCV(method='isotonic', cv=5)` via `machineLearning/source code/calibrate_models.py` (post-process script run after the notebooks). Track A admission Brier dropped from 0.1508 to **0.0819** (46% reduction); Track B readmission Brier from 0.1590 to 0.1558 (mild — XGB was already moderately calibrated). The dashboard's percentage outputs now correspond meaningfully to empirical event rates in the test set. Calibrated thresholds (0.2832 / 0.3648) sit in `thresholds.json` and the React app reads them via the slim mirror at `diabetesDashboard/public/data/thresholds.json`.
 
-**Literature context.** LOS is the most-cited readmission predictor (LACE index, Emi-Johnson 2025, García-Mosquera 2025) — the *feature* is legitimate, but the *computation window* must be causally prior to the outcome.
+**Trade-off.** The new headline ROC-AUC for Track B is 0.7992 (calibrated), down from the leaky 0.8757. The lost ~0.07 was outcome-measurement masquerading as predictive power; the new number is honest and defendable.
+
+**Literature context.** LOS is the most-cited readmission predictor (LACE index, Emi-Johnson 2025, García-Mosquera 2025). The *feature* is legitimate; the *computation window* must be causally prior to the outcome. Index_LOS satisfies this.
 
 ---
 
@@ -441,9 +452,9 @@ Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; 
 
 ### Tier 1 — substantive
 
-1. **`Avg_LOS` temporal leakage in Track B headline.** Documented + ablation already done (§11). Headline 0.8757 is mitigated by also publishing 0.8131; the *fix* (recompute LOS using only pre-index claims) is queued as Future Work.
+1. ~~**`Avg_LOS` temporal leakage in Track B headline.**~~ **Resolved 2026-05-05** by redefining the feature as `Index_LOS = LOS of first IP claim per patient`. Post-fix ablation Δ ROC-AUC = +0.0120, below the 0.05 gate. See §11. Historical leaky number 0.8757 should still be cited in the report's Methods narrative as "the original leaky definition" so reviewers see the fix arc.
 2. **Target ≠ standard 30-day readmission.** Per §1, `Readmitted_Yes_No = Num_Admissions > 1` is all-cause recurrent admission, not a 30-day window. AUC comparisons against UCI/LACE/MIMIC-III need an explicit "different target definition" caveat.
-3. **No probability calibration.** Dashboard surfaces `Stage_1_Admission_Risk` as a percentage but the underlying XGBoost score is uncalibrated. A `CalibratedClassifierCV` wrap + reliability diagram would close this.
+3. ~~**No probability calibration.**~~ **Resolved 2026-05-05.** Both XGB champions are now wrapped in `CalibratedClassifierCV(method='isotonic', cv=5)` via `calibrate_models.py`; reliability diagrams saved to `machineLearning/plots/`. Track A Brier dropped 0.1508 → 0.0819. The dashboard reads calibrated probabilities and calibrated thresholds. See §11.
 4. **No confidence intervals on AUCs.** Single 80/20 split → point estimates only. No bootstrap, no nested CV, no seed-robustness check.
 5. **No external or temporal validation.** Train and test from the same TPA, same population, same window.
 
@@ -456,7 +467,7 @@ Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; 
 10. Severity index is a clinically-motivated heuristic (insulin → Severe, biguanide-only → Mild) not validated against HbA1c / Charlson.
 11. Description-to-ICD mapping is exact-string-match — silent misses on casing/wording variants.
 12. Provider blacklist (`SUPP343 / PHAR455 / PHAR588 / KPJ036`) is hardcoded with no documented rationale beyond "pharmacy/supplier".
-13. `Avg_LOS = mean(LOS)` across all claim types — outpatient claims with LOS=0 dilute the inpatient signal.
+13. ~~`Avg_LOS = mean(LOS)` across all claim types — outpatient claims with LOS=0 dilute the inpatient signal.~~ **Resolved** — replaced by `Index_LOS` (first IP claim only, see §11). Outpatient claims no longer touch the feature.
 14. No requirements.txt / lockfile, no unit tests on `SEVERITY_INDEX` or `Readmitted_Yes_No` derivation, no subgroup performance breakdown.
 
 ### NOT flaws (common pushbacks worth pre-empting)
