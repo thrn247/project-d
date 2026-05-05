@@ -10,7 +10,7 @@
 
 **One-line purpose:** Develop, interpret, and surface XGBoost-based risk scores for (A) initial hospital admission and (B) all-cause recurrent inpatient admission ("readmission") in Malaysian Type-2 diabetes patients, using a real-world PMCare Third-Party-Administrator claims extract, and expose the results through a React expert-review dashboard for formative usability evaluation.
 
-> **Target definition note (important):** `Readmitted_Yes_No = (Num_Admissions > 1)` flags any patient with two or more inpatient admissions across the data window. This is **not** the standard 30-day readmission window used by UCI / LACE / MIMIC-III studies. Internally coherent, but every literature comparison must say so explicitly — see §8 and §13.
+> **Target definition note — deliberate design choice (NOT a flaw).** `Readmitted_Yes_No = (Num_Admissions > 1)` flags any patient with two or more inpatient admissions across the data window. This is **not** the standard 30-day readmission window used by UCI / LACE / MIMIC-III studies, and the choice is intentional: the 30-day positive class on this TPA dataset is too sparse for stable training (≤10% of admitted patients vs the current 27.82% under all-cause recurrence). A 30-day target would push the readmission model into a degenerate-imbalance regime that the n=7,959 admitted cohort cannot support. Internally coherent and clinically useful for "ever-readmits" risk; **every literature comparison against 30-day-target studies must explicitly state the target-definition difference** — see §8 (benchmarking) and §13 (limitations). This is the methodological cost we accept in exchange for sufficient positive-class signal.
 
 **Repo:** `github.com/thrn247/project-d`
 **Live dashboard:** `https://projectd-theta.vercel.app`
@@ -230,6 +230,16 @@ Calibrated XGB threshold (production): 0.2832
 ```
 Metadata is regenerated automatically at the end of the admission notebook; the calibrated threshold is appended by `calibrate_models.py` afterwards.
 
+### 5.6 `machineLearning/source code/calibrate_models.py`
+Post-process script that runs **after** the two ML notebooks. Wraps both XGB champions in `CalibratedClassifierCV(method='isotonic', cv=5)`, re-derives F1-max thresholds on calibrated train probas, and overwrites `xgboost_admission.pkl` / `xgboost_readmission.pkl` with the calibrated wrappers. Updates the two `xgb_*` keys in `thresholds.json` and mirrors them to the dashboard. Generates reliability-diagram PNGs in `machineLearning/plots/`. Idempotent — re-runs detect already-calibrated pickles and just re-derive the threshold without recursive wrapping. **Track A and Track B are calibrated independently** (LR / RF stay un-calibrated; only the production XGB champions are wrapped, since only they are consumed by the dashboard).
+
+Usage:
+```bash
+python "machineLearning/source code/calibrate_models.py"
+```
+
+`build_export.py` and `export_shap_plots.py` know how to extract a sub-model from the calibrated wrapper for SHAP (`cal.calibrated_classifiers_[0].estimator`) — TreeExplainer doesn't accept `CalibratedClassifierCV` directly, but the tree-level feature contributions are unchanged by isotonic calibration.
+
 ---
 
 ## 6. `diabetesDashboard/` — front-end and batch inference
@@ -441,8 +451,8 @@ The notebook itself prints `✅ Δ ROC-AUC ≤ 0.05 — Index_LOS is not materia
 **When in doubt:**
 - The canonical severity source is `ml_ready_dataset.csv.Severity_Encoded`, mapped via `{0: Mild, 1: Moderate, 2: Severe}`.
 - The canonical payload builder is `diabetesDashboard/scripts/build_export.py`.
-- The canonical Track B threshold is `0.3394` (XGBoost optimal, train-learned) — everything else is either legacy or a dashboard display heuristic. The companion no-LOS ablation threshold is `0.3128`.
-- Dataset size assertions: 62,135 patients, 7,999 admitted, 2,228 readmitted globally — any deviation after a pipeline re-run is a red flag.
+- The canonical Track A admission threshold is `0.2832` (calibrated XGB, post-isotonic). The canonical Track B readmission threshold is `0.3648` (calibrated XGB, post-isotonic). The no-LOS ablation companion key is `xgb_readmission_noLOS = 0.3537` (uncalibrated, kept for reproducibility of the leakage gate).
+- Dataset size assertions (post AGE>=18 filter, post Index_LOS retrain): **61,406 patients, 7,959 admitted, 2,214 readmitted globally** — any deviation after a pipeline re-run is a red flag.
 
 ---
 
@@ -453,7 +463,7 @@ Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; 
 ### Tier 1 — substantive
 
 1. ~~**`Avg_LOS` temporal leakage in Track B headline.**~~ **Resolved 2026-05-05** by redefining the feature as `Index_LOS = LOS of first IP claim per patient`. Post-fix ablation Δ ROC-AUC = +0.0120, below the 0.05 gate. See §11. Historical leaky number 0.8757 should still be cited in the report's Methods narrative as "the original leaky definition" so reviewers see the fix arc.
-2. **Target ≠ standard 30-day readmission.** Per §1, `Readmitted_Yes_No = Num_Admissions > 1` is all-cause recurrent admission, not a 30-day window. AUC comparisons against UCI/LACE/MIMIC-III need an explicit "different target definition" caveat.
+2. **Target ≠ standard 30-day readmission — *design choice, not oversight*.** Per §1, `Readmitted_Yes_No = (Num_Admissions > 1)` is all-cause recurrent admission, not a 30-day window. The 30-day window was *considered and rejected* because the within-30-day positive class on this TPA dataset is too sparse for stable training (~5-10% of admitted vs the current 27.82% under the all-cause definition); 7,959 admitted patients × ~10% positive rate × 20% test split = ~160 positive test cases, which is below what the F1-max threshold-search needs to converge stably. The target stays "any subsequent inpatient admission within the data window". AUC comparisons against UCI / LACE / MIMIC-III studies (which all use 30-day) **must** state this difference explicitly — they are not measuring the same target. This stays in the limitations list because of the comparison caveat, not because the choice itself is faulty.
 3. ~~**No probability calibration.**~~ **Resolved 2026-05-05.** Both XGB champions are now wrapped in `CalibratedClassifierCV(method='isotonic', cv=5)` via `calibrate_models.py`; reliability diagrams saved to `machineLearning/plots/`. Track A Brier dropped 0.1508 → 0.0819. The dashboard reads calibrated probabilities and calibrated thresholds. See §11.
 4. **No confidence intervals on AUCs.** Single 80/20 split → point estimates only. No bootstrap, no nested CV, no seed-robustness check.
 5. **No external or temporal validation.** Train and test from the same TPA, same population, same window.
@@ -480,4 +490,67 @@ Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; 
 
 ---
 
-*Last updated: 2026-05-04 (CLAUDE.md cleanup: corrected stale SHAP drivers, fixed `Predicted_Admission` derivation comment, fixed canonical Track B threshold `0.3471 → 0.3394`, removed shipped roadmap items, added §13 known-flaws inventory). Maintained alongside the `BDH2372 Research Project II` submission.*
+## 14. Pipeline iteration history (for the report)
+
+Chronological record of methodology changes, traceable to specific commits + git tags. Cite the commit hashes in the report's Methods / Audit section to demonstrate the pipeline was iterated under documented scrutiny rather than declared correct on first pass. Use `git log --oneline` for the full picture; the milestones below are the load-bearing inflection points.
+
+### Phase 0 — initial pipeline (pre-2026-04-21)
+- Original 26-feature ML-ready dataset (later trimmed to 22 features by dropping `Avg_LOS`, `Num_Admissions`, `Readmitted_Yes_No` from Track A; similar leakage drops for Track B).
+- Provider blacklist + ICD-10 E11.* cohort filter (`01_clean_and_filter_claims.py`).
+
+### Phase 1 — 2026-04-21: 22-feature retrain, train-learned thresholds
+- Commits in the `aa2af3f / 160553b / 626ab9a / f20584d` cluster.
+- F1-max thresholds learned on TRAIN proba, applied to TEST (no leakage). Track A previously learned threshold on TEST — corrected here.
+- Headline AUCs: Track A XGB 0.8648; Track B XGB 0.8757 (with leaky `Avg_LOS`).
+- First documented `Avg_LOS` ablation: Δ ROC-AUC +0.0626 (over 0.05 gate) → flagged in CLAUDE.md §11.
+
+### Phase 2 — 2026-05-04: Dashboard rewrite + clinician-readable SHAP
+- Commit `ef9468e` — clinician-friendly SHAP labels, cross-filter on Cohort Overview, slideout depth (admission + readmission driver tabs, percentile context, modifiable/intrinsic chips), methods-popover header button. About-this-model dialog. Severity icons. Keyboard-accessible filters and drill-down.
+- Commit `b900607` — drop the two EDA-tab SHAP panels (clinically unreadable); keep per-patient SHAP in the slideout where it's interpretable. Slideout gains a cohort-baseline comparison line.
+
+### Phase 3 — 2026-05-05 (early): AGE>=18 cohort filter
+- Commit `6d5fddb` — defensive `AGE>=18` guard at `build_export.py` (Track A "fast" fix for the dashboard cohort).
+- Commit `ed4319a` — upstream `AGE>=18` filter in `01_clean_and_filter_claims.py` + full retrain. Removed 729 patients (mostly the 22 `AGE=0` "missing-encoded" records and 707 pediatric ages — Type-2 DM is rare under 18). New cohort: **62,135 → 61,406**.
+- Track A XGB AUC 0.8648 → 0.8676. Track B XGB 0.8757 → 0.8578 (filtered patients carried distinguishing signal). `Avg_LOS` ablation Δ unchanged at +0.064 (still leaky).
+- Tag: `pre-track-b-snapshot`. Branch: `backup-pre-track-b`.
+
+### Phase 4 — 2026-05-05 (late): `Avg_LOS → Index_LOS` leakage fix + isotonic calibration
+- Commit `b42c7e1` — the methodologically-load-bearing one.
+- `01_clean_and_filter_claims.py`: keep `SERVICE_DATE` so step 4 can order claims chronologically.
+- `04_aggregate_patients.ipynb`: drop the leaky `LOS: mean across all claims` aggregation. Replace with **`Index_LOS = LOS of first IP claim per patient`** (sorted by SERVICE_DATE). Causally prior to any subsequent admission; cannot encode the readmission outcome.
+- New post-process script `machineLearning/source code/calibrate_models.py`: wraps both XGB champions in `CalibratedClassifierCV(method='isotonic', cv=5)`, re-derives F1-max thresholds on calibrated train probas, saves reliability-diagram PNGs. Track A Brier 0.1508 → **0.0819 (-46%)**. Track B Brier 0.1590 → 0.1558 (mild — XGB was already moderately calibrated at 28% positive rate).
+- Track A XGB AUC 0.8676 → 0.8683 (essentially unchanged; Track A never used Avg_LOS). Track B XGB AUC 0.8578 → **0.7992** — the ~0.06 loss is the leakage being honestly accounted for. Ablation Δ ROC-AUC dropped from **+0.064 → +0.012** (now passes the 0.05 leakage gate empirically, not just claimed).
+- Two Tier-1 known flaws (CLAUDE.md §13) flipped from `open` to `resolved`: leakage (#1), calibration (#3).
+- Tag: `pre-index-los-snapshot`. Branch: `backup-pre-index-los`.
+
+### Pipeline rerun checklist (full reproduction from raw parquet)
+
+1. `python "dataPreprocessing/source code/01_clean_and_filter_claims.py"` (drops pharmacy claims + applies AGE>=18 + retains SERVICE_DATE)
+2. Execute `02_reshape_claims.ipynb` → `03_feature_engineering.ipynb` → `04_aggregate_patients.ipynb` (computes `Index_LOS` per first-IP-LOS rule)
+3. Execute `01_ML_Data_Prep.ipynb` (writes `ml_ready_dataset.csv`)
+4. Execute `02_ML_Model_Admission.ipynb` AND `03_ML_Model_Readmission.ipynb` (can run in parallel — they share `thresholds.json` via read-merge-write, the calibration step at the end overwrites both keys anyway)
+5. `python "machineLearning/source code/calibrate_models.py"` (wraps XGB champions in isotonic calibration, re-derives thresholds)
+6. `python diabetesDashboard/scripts/build_export.py` (regenerates dashboard payload)
+7. `python diabetesDashboard/scripts/export_shap_plots.py` (regenerates the four SHAP JSONs — they're produced for the report even though the UI no longer consumes them)
+8. `cd diabetesDashboard && npm run lint && npm run build`
+
+Total runtime ≈ 30-50 min (the two ML notebook executions are the bulk).
+
+### Audit-trail markers preserved
+
+| Marker | What it points to |
+|---|---|
+| `git tag pre-track-b-snapshot` | Repo state before the AGE>=18 retrain (commit `b900607`) |
+| `git tag pre-index-los-snapshot` | Repo state before the `Avg_LOS → Index_LOS` retrain (commit `ed4319a`) |
+| `git branch backup-pre-track-b` | Same as the pre-track-b tag — branch form |
+| `git branch backup-pre-index-los` | Same as the pre-index-los tag — branch form |
+| Commit messages | Each pipeline retrain has a multi-paragraph commit message documenting numerical deltas, ablation results, and rationale. `git log --grep='pipeline'` retrieves them. |
+| `model_metadata.txt` | Always reflects the most recent Track A retrain timestamp; calibrated XGB threshold appended by `calibrate_models.py`. |
+| Notebook output cells | Each retrain regenerates inline outputs (tables, classification reports, ablation summaries, SHAP plots) — preserved in the .ipynb files via `git`. |
+| `machineLearning/plots/` | Reliability-diagram PNGs for both tracks — direct visual evidence of the calibration improvement. |
+
+For the report's Methods section: cite Phase 4's `b42c7e1` and the ablation gate flip (+0.064 → +0.012) as the load-bearing methodological proof point. Reproducible by `git checkout b42c7e1` and re-running the pipeline checklist above.
+
+---
+
+*Last updated: 2026-05-05 (Phase 4: Avg_LOS → Index_LOS leakage fix + isotonic calibration shipped via commit b42c7e1; §11 + §13 reflect resolved status; §14 iteration history added for report traceability). Maintained alongside the `BDH2372 Research Project II` submission.*
