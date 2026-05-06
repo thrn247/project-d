@@ -47,7 +47,7 @@ const COL_ALIGN = {
 };
 
 const ROW_HEIGHT = 72;
-const TILE_LIMIT = 60;
+const TILE_LIMIT = 20; // mirrors the original tile view's cap before Step 4
 
 export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA, openSlideOut }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -252,62 +252,79 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     );
   };
 
-  // ─── Tiles view (Step 4 retired the original 20-card grid; restored here
-  // post-feedback with a polished card design and a 60-tile cap). ────────
+  // ─── Tiles view ──────────────────────────────────────────────────────
+  // Restored to the original (pre-Step-4) design after user feedback —
+  // top-N spotlight cards with centered layout, large risk numbers, and
+  // a top-edge severity accent. Reuses the original .patient-card +
+  // .grid-container CSS that was preserved in index.css. Cap mirrors
+  // the original 20-tile limit; the table view holds the full list.
+  // Wrapped in .tile-scroll-host so the grid scrolls inside the card
+  // shell rather than the parent .main-content.
   const renderTiles = () => (
-    <div className="tile-grid">
-      {tileItems.map(row => {
-        const p = row.original;
-        const sevClass = p.Severity.toLowerCase();
-        const admFlagged = p.Stage_1_Admission_Risk >= thresholds.admission;
-        const readmFlagged = p.Stage_2_Readmission_Risk !== null && p.Stage_2_Readmission_Risk >= thresholds.readmission;
-        const topDriver = p.Top_Risk_Drivers?.[0]?.split(' (+')[0];
-        return (
-          <button
-            type="button"
-            key={p.Patient_ID}
-            className={`patient-tile patient-tile--${sevClass}`}
-            onClick={() => openWithSiblings(p)}
-            aria-label={`View patient ${p.Patient_ID}`}
-          >
-            <div className="patient-tile__header">
-              <span className="patient-tile__id">{p.Patient_ID}</span>
-              <span className={`badge ${sevClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
-                <SeverityIcon severity={p.Severity} size={11} />
-                {p.Severity}
-              </span>
-            </div>
-            <div className="patient-tile__demographics">
-              {p.Age} yrs · {p.Sex === 'M' ? 'Male' : p.Sex === 'F' ? 'Female' : p.Sex}
-            </div>
-            <div className="patient-tile__metrics">
-              <div className="patient-tile__metric">
-                <span className="patient-tile__metric-label">Admission</span>
-                <span className={`patient-tile__metric-value ${admFlagged ? 'is-danger' : ''}`}>
-                  {(p.Stage_1_Admission_Risk * 100).toFixed(0)}<span className="patient-tile__metric-pct">%</span>
+    <div className="tile-scroll-host">
+      <div className="grid-container">
+        {tileItems.map((row) => {
+          const patient = row.original;
+          const severityClass = patient.Severity.toLowerCase();
+          const admFlagged = patient.Stage_1_Admission_Risk >= thresholds.admission;
+          const readmFlagged = patient.Stage_2_Readmission_Risk !== null
+            && patient.Stage_2_Readmission_Risk >= thresholds.readmission;
+          const topDriver = patient.Top_Risk_Drivers?.[0]?.split(' (+')[0];
+          return (
+            <div
+              key={patient.Patient_ID}
+              className={`patient-card ${severityClass}`}
+              onClick={() => openWithSiblings(patient)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openWithSiblings(patient);
+                }
+              }}
+              tabIndex={0}
+              role="button"
+              aria-label={`View patient ${patient.Patient_ID}`}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', minHeight: '280px' }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <span className={`badge ${severityClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <SeverityIcon severity={patient.Severity} size={12} />
+                  {patient.Severity}
                 </span>
+                <h3 style={{ fontSize: '1.5rem', margin: '0', color: 'var(--text-main)' }}>{patient.Patient_ID}</h3>
+                <p style={{ margin: 0, fontSize: '0.85rem' }}>{patient.Age} yrs • {patient.Sex}</p>
               </div>
-              <div className="patient-tile__metric">
-                <span className="patient-tile__metric-label">Readmission</span>
-                <span className={`patient-tile__metric-value ${readmFlagged ? 'is-warning' : ''} ${p.Stage_2_Readmission_Risk == null ? 'is-na' : ''}`}>
-                  {p.Stage_2_Readmission_Risk != null
-                    ? <>{(p.Stage_2_Readmission_Risk * 100).toFixed(0)}<span className="patient-tile__metric-pct">%</span></>
-                    : 'N/A'}
-                </span>
+
+              <div style={{ margin: '1.5rem 0', display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Admit Risk</div>
+                  <div className="display-num" style={{ fontSize: '2rem', color: admFlagged ? 'var(--danger)' : 'var(--text-main)' }}>
+                    {(patient.Stage_1_Admission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
+                  </div>
+                </div>
+                {patient.Stage_2_Readmission_Risk !== null && (
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.25rem' }}>Readmit Risk</div>
+                    <div className="display-num" style={{ fontSize: '2rem', color: readmFlagged ? 'var(--warning)' : 'var(--text-main)' }}>
+                      {(patient.Stage_2_Readmission_Risk * 100).toFixed(0)}<span style={{ fontSize: '1.25rem' }}>%</span>
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {topDriver && (
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'var(--bg-surface)', padding: '0.75rem 1.25rem', borderRadius: '0.5rem', border: '1px solid var(--border-light)', display: 'inline-block' }}>
+                  <span style={{ color: 'var(--danger)', fontWeight: '600', marginRight: '0.5rem' }}>↑ Drivers:</span>
+                  {topDriver}
+                </div>
+              )}
             </div>
-            {topDriver && (
-              <div className="patient-tile__driver">
-                <AlertCircle size={12} />
-                <span>{topDriver}</span>
-              </div>
-            )}
-          </button>
-        );
-      })}
+          );
+        })}
+      </div>
       {rows.length > TILE_LIMIT && (
-        <div className="tile-grid__cap-hint">
-          Showing top {TILE_LIMIT.toLocaleString()} of {rows.length.toLocaleString()}.
+        <div className="tile-cap-hint">
+          Showing top {TILE_LIMIT.toLocaleString()} of {rows.length.toLocaleString()} patients.
           Switch to Table view for the full sorted list.
         </div>
       )}
