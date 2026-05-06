@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useDeferredValue } from 'react';
-import { ChevronDown, ChevronUp, AlertCircle, AlertTriangle, TrendingUp, Activity, ChevronLeft, ChevronRight, Search, Download, LayoutGrid, List, Flame, CircleDot } from 'lucide-react';
+import { ChevronDown, ChevronUp, AlertCircle, AlertTriangle, TrendingUp, Activity, ChevronLeft, ChevronRight, Search, LayoutGrid, List, Flame, CircleDot } from 'lucide-react';
 import PatientSlideOut from './PatientSlideOut';
-import FilterChips from './FilterChips';
+import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import { applyFilters, isFilterActive } from '../filters';
 
@@ -24,7 +24,7 @@ const SeverityIcon = ({ severity, size = 14 }) => {
   return Icon ? <Icon size={size} /> : null;
 };
 
-export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters }) {
+export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA }) {
   const [sortField, setSortField] = useState('Stage_1_Admission_Risk');
   const [sortDesc, setSortDesc] = useState(true);
   
@@ -92,16 +92,11 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     setCurrentPage(1); // Reset to first page on sort
   };
 
-  const handleFilter = (f) => {
-    updateFilters({ severity: f });
-    setCurrentPage(1); // Reset to first page on filter
-  }
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
+  const handleSearchInput = (value) => {
+    setSearchQuery(value);
     setCurrentPage(1); // Reset pagination naturally
-  }
-  
+  };
+
   const handleExportCSV = () => {
     // Generate CSV only off the filtered processedData (could be 62k or 1 if searched)
     if (processedData.length === 0) return;
@@ -230,107 +225,46 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   return (
     <>
       <div className="glass-card table-view-container" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+        <div className="card-title-row">
           <div>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Activity color="var(--primary)" /> Patient Predictions
-            </h2>
-            <p style={{ marginTop: '0.25rem', fontSize: '0.9rem' }}>Showing {processedData.length.toLocaleString()} matching patients</p>
+            <h2><Activity color="var(--primary)" size={26} /> Patient Predictions</h2>
+            <p>Showing {processedData.length.toLocaleString()} matching patients</p>
           </div>
-          
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-            
-            {/* View Toggle (Grid / Table) */}
-            <div style={{ display: 'flex', background: 'var(--bg-dark)', borderRadius: '8px', padding: '0.25rem', border: '1px solid var(--border-light)' }}>
-              <button 
-                onClick={() => { setViewMode('table'); setCurrentPage(1); }}
-                style={{ background: viewMode === 'table' ? 'var(--bg-surface-high)' : 'transparent', border: 'none', padding: '0.5rem', borderRadius: '6px', color: viewMode === 'table' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'var(--transition)' }}
-                title="Table View"
-              ><List size={18} /></button>
-              <button 
-                onClick={() => { setViewMode('grid'); setCurrentPage(1); }}
-                style={{ background: viewMode === 'grid' ? 'var(--bg-surface-high)' : 'transparent', border: 'none', padding: '0.5rem', borderRadius: '6px', color: viewMode === 'grid' ? 'var(--primary)' : 'var(--text-muted)', cursor: 'pointer', transition: 'var(--transition)' }}
-                title="Grid View"
-              ><LayoutGrid size={18} /></button>
-            </div>
-
-            {/* Search Bar */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <Search size={16} style={{ position: 'absolute', left: '10px', color: 'var(--text-muted)' }} />
-              <input 
-                type="text" 
-                placeholder="Search Patient ID..." 
-                value={searchQuery}
-                onChange={handleSearchChange}
-                style={{
-                  background: 'var(--bg-dark)',
-                  border: '1px solid var(--border-light)',
-                  color: 'var(--text-main)',
-                  padding: '0.6rem 1rem 0.6rem 2.2rem',
-                  borderRadius: '8px',
-                  outline: 'none',
-                  fontSize: '0.9rem',
-                  width: '180px',
-                  transition: 'var(--transition)',
-                  fontFamily: 'Inter, sans-serif'
-                }}
-              />
-            </div>
-          
-            {/* CSV Export Button */}
+          <div className="pred-view-toggle" role="group" aria-label="View mode">
             <button
-               onClick={handleExportCSV}
-               style={{
-                  display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  background: 'var(--bg-surface-high)',
-                  color: 'var(--text-main)',
-                  border: '1px solid var(--border-light)',
-                  padding: '0.6rem 1rem',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '0.9rem',
-                  fontFamily: 'Inter, sans-serif',
-                  transition: 'var(--transition)'
-               }}
+              type="button"
+              onClick={() => { setViewMode('table'); setCurrentPage(1); }}
+              className={viewMode === 'table' ? 'active' : ''}
+              title="Table view"
+              aria-label="Table view"
+              aria-pressed={viewMode === 'table'}
             >
-               <Download size={16} /> Export CSV
+              <List size={16} />
             </button>
-
-            {/* Severity Tabs (dispatch to App-level filter state) */}
-            <div style={{ display: 'flex', gap: '0.25rem', background: 'var(--bg-dark)', padding: '0.25rem', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
-              {['All', 'Severe', 'Moderate', 'Mild'].map(f => (
-                <button
-                  key={f}
-                  onClick={() => handleFilter(f)}
-                  style={{
-                    background: filters.severity === f ? 'var(--primary)' : 'transparent',
-                    color: filters.severity === f ? '#fff' : 'var(--text-muted)',
-                    border: 'none',
-                    padding: '0.5rem 1rem',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontWeight: filters.severity === f ? '600' : '500',
-                    fontFamily: 'Inter, sans-serif',
-                    fontSize: '0.85rem',
-                    transition: 'var(--transition)'
-                  }}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => { setViewMode('grid'); setCurrentPage(1); }}
+              className={viewMode === 'grid' ? 'active' : ''}
+              title="Grid view"
+              aria-label="Grid view"
+              aria-pressed={viewMode === 'grid'}
+            >
+              <LayoutGrid size={16} />
+            </button>
           </div>
         </div>
 
-        <div style={{ padding: '0 1.5rem', marginTop: '1rem' }}>
-          <FilterChips
-            filters={filters}
-            updateFilters={updateFilters}
-            clearAllFilters={clearAllFilters}
-            surface="compact"
-          />
-        </div>
+        <CohortFilterBar
+          data={data}
+          filters={filters}
+          updateFilters={updateFilters}
+          clearAllFilters={clearAllFilters}
+          variant="predictions"
+          onJumpToEDA={onJumpToEDA}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchInput}
+          onExportCSV={handleExportCSV}
+        />
 
         {viewMode === 'grid' ? renderGridCards() : (
           <div style={{ overflowX: 'auto', flex: 1, position: 'relative' }}>

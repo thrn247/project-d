@@ -415,3 +415,296 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .radix-dialog-content[data-state="open"]   { animation: radix-content-in 0.18s ease-out; }
 .radix-dialog-content[data-state="closed"] { animation: radix-content-in 0.12s ease-in reverse; }
 .radix-dialog-content:focus { outline: none; }
+
+/* DropdownMenu — used by CohortFilterBar in Step 2. RadioGroup + RadioItem
+   give automatic single-select semantics; the ✓ marker is rendered in CSS
+   off the [data-state="checked"] attribute. */
+.radix-dropdown-content {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 0.6rem;
+  padding: 0.4rem;
+  min-width: 200px;
+  max-height: 380px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  z-index: 220;
+  animation: radix-fade-in 0.16s ease-out;
+}
+.radix-dropdown-item {
+  position: relative;
+  padding: 0.5rem 0.75rem 0.5rem 1.85rem;
+  border-radius: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  cursor: pointer;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  user-select: none;
+}
+.radix-dropdown-item[data-highlighted] {
+  background: var(--primary-container);
+  color: var(--primary);
+}
+.radix-dropdown-item[data-state="checked"] { font-weight: 600; }
+.radix-dropdown-item[data-state="checked"]::before {
+  content: "✓";
+  position: absolute;
+  left: 0.65rem;
+  color: var(--primary);
+}
+
+/* ─── CohortFilterBar (Step 2) ─────────────────────────────────────────
+   Sticky single-row filter strip that lives at the top of both Cohort
+   Overview and Patient Predictions cards. Replaces 3 separate filter UIs
+   that previously lived inline. position: sticky with top:0 sticks the
+   bar to the top of .main-content's scroll viewport.
+   ──────────────────────────────────────────────────────────────────── */
+
+.cohort-filter-bar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 2rem;
+}
+
+.cohort-filter-bar__row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cohort-filter-bar__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.cohort-filter-bar__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.82rem;
+  margin-right: 0.15rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cohort-filter-bar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+}
+
+.cfb-dropdown-group {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 0.5rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  transition: var(--transition);
+  overflow: hidden;
+}
+.cfb-dropdown-group--active {
+  background: var(--primary-container);
+  border-color: var(--primary);
+}
+
+.cfb-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.42rem 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.cfb-dropdown-trigger:hover { background: rgba(148, 163, 184, 0.15); }
+.cfb-dropdown-trigger:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+.cfb-dropdown-trigger[data-state="open"] { background: rgba(148, 163, 184, 0.15); }
+.cfb-dropdown-group--active .cfb-dropdown-trigger { color: var(--primary); font-weight: 600; }
+
+.cfb-dropdown-clear {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--primary);
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+}
+.cfb-dropdown-clear:hover { background: var(--primary); color: #fff; }
+.cfb-dropdown-clear:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.cfb-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  transition: var(--transition);
+}
+.cfb-search input {
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  width: 160px;
+}
+.cfb-search input::placeholder { color: var(--text-muted); }
+.cfb-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.cfb-clear-all {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: underline;
+  padding: 0.4rem 0.5rem;
+}
+.cfb-clear-all:hover { color: var(--text-main); }
+
+.cfb-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+.cfb-jump:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--primary-glow);
+}
+.cfb-jump--reverse {
+  background: var(--bg-surface-high);
+  color: var(--text-main);
+  box-shadow: none;
+}
+.cfb-jump--reverse:hover { background: var(--bg-surface-highest); transform: translateY(-1px); box-shadow: none; }
+
+.cfb-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: var(--bg-surface-high);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  padding: 0.45rem 0.9rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: var(--transition);
+}
+.cfb-export:hover { background: var(--bg-card); }
+
+.cohort-filter-bar__summary {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--text-main);
+}
+
+/* Card title row — sits above the sticky filter bar so the title scrolls
+   away on long pages, leaving the bar visible. */
+.card-title-row {
+  padding: 1.5rem 2rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.card-title-row h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 1.5rem;
+}
+.card-title-row p {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* View-mode toggle on Predictions tab. Becomes a Comfortable/Compact density
+   toggle in Step 4 (when grid view is retired); same CSS will be reused. */
+.pred-view-toggle {
+  display: inline-flex;
+  background: var(--bg-surface);
+  border-radius: 0.5rem;
+  padding: 0.2rem;
+  border: 1px solid var(--border-light);
+}
+.pred-view-toggle button {
+  background: transparent;
+  border: none;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.4rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  transition: var(--transition);
+}
+.pred-view-toggle button:hover { color: var(--text-main); }
+.pred-view-toggle button.active {
+  background: var(--bg-card);
+  color: var(--primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.pred-view-toggle button:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
