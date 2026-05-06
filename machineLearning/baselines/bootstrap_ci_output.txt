@@ -1,0 +1,24 @@
+C:\Users\thira\AppData\Local\Programs\Python\Python310\lib\site-packages\sklearn\utils\validation.py:2749: UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names
+  warnings.warn(
+C:\Users\thira\AppData\Local\Programs\Python\Python310\lib\site-packages\sklearn\utils\validation.py:2749: UserWarning: X does not have valid feature names, but RandomForestClassifier was fitted with feature names
+  warnings.warn(
+C:\Users\thira\AppData\Local\Programs\Python\Python310\lib\site-packages\sklearn\utils\validation.py:2749: UserWarning: X does not have valid feature names, but LogisticRegression was fitted with feature names
+  warnings.warn(
+C:\Users\thira\AppData\Local\Programs\Python\Python310\lib\site-packages\sklearn\utils\validation.py:2749: UserWarning: X does not have valid feature names, but RandomForestClassifier was fitted with feature names
+  warnings.warn(
+
+=== TRACK A — ADMISSION (test n=12282, +rate=0.1296) ===
+Model                               ROC-AUC [95% CI]             PR-AUC [95% CI]             
+-----------------------------------------------------------------------------------------------
+Logistic Regression                 0.8608 [0.8518-0.8697]   0.5098 [0.4843-0.5350]
+Random Forest                       0.8628 [0.8538-0.8716]   0.5175 [0.4905-0.5430]
+XGBoost (calibrated)                0.8683 [0.8600-0.8767]   0.5393 [0.5116-0.5643]
+
+=== TRACK B — READMISSION (test n=1592, +rate=0.2783) ===
+Model                               ROC-AUC [95% CI]             PR-AUC [95% CI]             
+-----------------------------------------------------------------------------------------------
+Logistic Regression                 0.7871 [0.7615-0.8116]   0.5783 [0.5295-0.6274]
+Random Forest                       0.7905 [0.7668-0.8132]   0.5415 [0.4912-0.5884]
+XGBoost (calibrated)                0.7992 [0.7739-0.8219]   0.5850 [0.5329-0.6333]
+
+[1,000-resample bootstrap, seed=42]

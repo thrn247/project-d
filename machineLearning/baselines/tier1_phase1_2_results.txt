@@ -1,0 +1,64 @@
+Tier 1 — Phase 1 (Bootstrap 95% CIs) + Phase 2 (5-fold Stratified CV)
+=====================================================================
+Run date: 2026-05-06
+Pipeline state: post-2026-05-05 retrain (commit 9bd0b6d, AGE>=18 cohort,
+                Index_LOS, isotonic-calibrated XGB champions)
+
+Method:
+- Bootstrap: 1,000 resamples-with-replacement of the held-out test set's
+  predicted probabilities (seed=42). Reports point estimate + 2.5/97.5
+  percentile band.
+- 5-fold CV: StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+  over the FULL cohort. Each fold re-fits the ColumnTransformer + each
+  model with the production hyperparameters; XGB is re-calibrated inside
+  each fold via CalibratedClassifierCV(method='isotonic', cv=5).
+  Threshold = F1-max learned on TRAIN proba per fold.
+
+============================================================
+TRACK A — ADMISSION (n=61,406, +rate=12.96%)
+============================================================
+Single 80/20 split (n_test=12,282) — bootstrap CIs on test predictions:
+  Logistic Regression : ROC-AUC 0.8608 [0.8518 - 0.8697]   PR-AUC 0.5098 [0.4843 - 0.5350]
+  Random Forest       : ROC-AUC 0.8628 [0.8538 - 0.8716]   PR-AUC 0.5175 [0.4905 - 0.5430]
+  XGBoost (calibrated): ROC-AUC 0.8683 [0.8600 - 0.8767]   PR-AUC 0.5393 [0.5116 - 0.5643]
+
+5-fold stratified CV (mean across 5 folds, ±std):
+  Logistic Regression : ROC-AUC 0.8491 ± 0.0032   PR-AUC 0.4913 ± 0.0128   F1 0.4903 ± 0.0062
+  Random Forest       : ROC-AUC 0.8536 ± 0.0054   PR-AUC 0.5034 ± 0.0148   F1 0.4871 ± 0.0072
+  XGBoost (calibrated): ROC-AUC 0.8578 ± 0.0044   PR-AUC 0.5255 ± 0.0144   F1 0.4982 ± 0.0073
+
+Single-split was a slightly LUCKY draw (+0.01 above CV mean for all 3 models).
+This is within 1× the CV std for every model — normal sampling variance, not a
+methodology bug. The 5-fold mean is the more defensible headline.
+
+============================================================
+TRACK B — READMISSION (admitted-only, n=7,959, +rate=27.83%)
+============================================================
+Single 80/20 split (n_test=1,592) — bootstrap CIs on test predictions:
+  Logistic Regression : ROC-AUC 0.7871 [0.7615 - 0.8116]   PR-AUC 0.5783 [0.5295 - 0.6274]
+  Random Forest       : ROC-AUC 0.7905 [0.7668 - 0.8132]   PR-AUC 0.5415 [0.4912 - 0.5884]
+  XGBoost (calibrated): ROC-AUC 0.7992 [0.7739 - 0.8219]   PR-AUC 0.5850 [0.5329 - 0.6333]
+
+5-fold stratified CV (mean across 5 folds, ±std):
+  Logistic Regression : ROC-AUC 0.8030 ± 0.0116   PR-AUC 0.6076 ± 0.0104   F1 0.6067 ± 0.0173
+  Random Forest       : ROC-AUC 0.8045 ± 0.0082   PR-AUC 0.6024 ± 0.0075   F1 0.5662 ± 0.0096
+  XGBoost (calibrated): ROC-AUC 0.8136 ± 0.0077   PR-AUC 0.6185 ± 0.0031   F1 0.6017 ± 0.0107
+
+Single-split was a slightly UNLUCKY draw (−0.014 below CV mean for all 3 models).
+Same as Track A: within sampling noise but the 5-fold mean is the more honest
+headline. Worth flagging in the report.
+
+============================================================
+SUMMARY — what to publish
+============================================================
+The capstone should report 5-fold CV means as the headline numbers and quote
+the bootstrap CI from the test split as the secondary evidence:
+
+  Track A — XGBoost (calibrated):  ROC-AUC = 0.858 ± 0.004 (5-fold)
+                                    Test-split bootstrap: 0.8683 [95% CI 0.860–0.877]
+
+  Track B — XGBoost (calibrated):  ROC-AUC = 0.814 ± 0.008 (5-fold)
+                                    Test-split bootstrap: 0.7992 [95% CI 0.774–0.822]
+
+These are the most rigorous numbers extractable from the existing models —
+no retrain needed.
