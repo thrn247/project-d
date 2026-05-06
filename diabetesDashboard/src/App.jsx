@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import { MotionConfig } from 'motion/react';
 import { Toaster } from 'sonner';
 import PredictionsDirectory from './components/PredictionsDirectory';
 import EDAView from './components/EDAView';
@@ -117,6 +118,7 @@ export default function App() {
 
   if (loading) {
     return (
+      <MotionConfig reducedMotion="user">
       <Tooltip.Provider delayDuration={150}>
         <div className="app-container">
           <div className="loading-screen">
@@ -129,10 +131,12 @@ export default function App() {
         </div>
         <Toaster richColors position="bottom-right" theme="light" />
       </Tooltip.Provider>
+      </MotionConfig>
     );
   }
 
   return (
+    <MotionConfig reducedMotion="user">
     <Tooltip.Provider delayDuration={150}>
       <div className="app-container">
         <header className="header">
@@ -309,5 +313,6 @@ export default function App() {
 
       <Toaster richColors position="bottom-right" theme="light" />
     </Tooltip.Provider>
+    </MotionConfig>
   );
 }
