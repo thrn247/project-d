@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Toaster } from 'sonner';
@@ -28,6 +28,10 @@ export default function App() {
   // open a patient from anywhere (any tab, any time).
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [isSlideOpen, setIsSlideOpen] = useState(false);
+  // Sibling list for arrow-key navigation in the slideout (Step 5). Empty when
+  // opened from the command palette (no row context); populated by
+  // PredictionsDirectory when opened from a row click.
+  const [siblings, setSiblings] = useState([]);
 
   useEffect(() => {
     Promise.all([
@@ -51,8 +55,31 @@ export default function App() {
   const clearAllFilters = () => setFilters(EMPTY_FILTERS);
   const onJumpToPredictions = () => setActiveTab('predictions');
   const onJumpToEDA = () => setActiveTab('eda');
-  const openSlideOut = (patient) => { setSelectedPatient(patient); setIsSlideOpen(true); };
+  const openSlideOut = (patient, sibs = []) => {
+    setSelectedPatient(patient);
+    setSiblings(sibs);
+    setIsSlideOpen(true);
+  };
   const closeSlideOut = () => setIsSlideOpen(false);
+
+  // O(1) patient lookup map for slideout sibling navigation.
+  const patientLookup = useMemo(() => {
+    const m = new Map();
+    data.forEach(p => m.set(p.Patient_ID, p));
+    return m;
+  }, [data]);
+
+  const navigateSlideOut = useCallback((direction) => {
+    if (!selectedPatient || siblings.length < 2) return;
+    const idx = siblings.indexOf(selectedPatient.Patient_ID);
+    if (idx === -1) return;
+    const len = siblings.length;
+    const nextIdx = direction === 'next'
+      ? (idx + 1) % len
+      : (idx - 1 + len) % len;
+    const next = patientLookup.get(siblings[nextIdx]);
+    if (next) setSelectedPatient(next);
+  }, [selectedPatient, siblings, patientLookup]);
 
   // Global keyboard shortcuts: Cmd/Ctrl+K opens palette; Cmd/Ctrl+1/2 jumps
   // tabs; ? opens shortcuts help (suppressed when typing in inputs/textareas).
@@ -262,6 +289,8 @@ export default function App() {
         onClose={closeSlideOut}
         thresholds={thresholds}
         data={data}
+        siblings={siblings}
+        onNavigate={navigateSlideOut}
       />
 
       <CommandPalette

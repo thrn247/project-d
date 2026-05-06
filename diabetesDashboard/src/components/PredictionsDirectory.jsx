@@ -164,6 +164,16 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   const { rows } = table.getRowModel();
   const rowHeight = density === 'compact' ? 52 : 76;
 
+  // Sibling list for slideout arrow-key navigation — Patient_IDs in the
+  // current sort/filter/search order. Recomputed only when the row model
+  // changes; the array reference stays stable per render so React props
+  // diff is cheap.
+  const siblings = useMemo(() => rows.map(r => r.original.Patient_ID), [rows]);
+  const openWithSiblings = useCallback(
+    (patient) => openSlideOut(patient, siblings),
+    [openSlideOut, siblings]
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
@@ -199,7 +209,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   const handleRowKeyDown = (e, row, virtualRowIndex) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      openSlideOut(row.original);
+      openWithSiblings(row.original);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       const next = Math.min(rows.length - 1, virtualRowIndex + 1);
@@ -346,7 +356,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
                       tabIndex={0}
                       role="button"
                       aria-label={`View patient ${row.original.Patient_ID}`}
-                      onClick={() => openSlideOut(row.original)}
+                      onClick={() => openWithSiblings(row.original)}
                       onKeyDown={(e) => handleRowKeyDown(e, row, virtualRow.index)}
                       onFocus={() => setFocusedRowIndex(virtualRow.index)}
                       className="virtual-row"
