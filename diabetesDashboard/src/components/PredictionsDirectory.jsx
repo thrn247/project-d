@@ -3,14 +3,13 @@ import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Activity, Search,
-  Rows3, AlignJustify, Flame, CircleDot,
+  List, LayoutGrid, Flame, CircleDot,
 } from 'lucide-react';
 import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import { applyFilters, isFilterActive } from '../filters';
 
-// Build a filename slug encoding all active cross-filter dimensions, so users can
-// see which slice they exported even after files are renamed.
+// Build a filename slug encoding all active cross-filter dimensions.
 const slugifyFilters = (filters) => {
   const cleanSlug = (s) => String(s).replace(/[<>+%]/g, '').replace(/[^a-zA-Z0-9_-]/g, '_');
   const parts = [
@@ -36,21 +35,25 @@ const severityOrderSortFn = (rowA, rowB) => {
   return a - b;
 };
 
-// Column widths in px. Total ≈ 810 + flex for the driver column.
-const COL_WIDTHS = {
-  Patient_ID: 120,
-  demographics: 140,
-  Severity: 140,
-  Stage_1_Admission_Risk: 130,
-  Stage_2_Readmission_Risk: 140,
-  driver: 240,
+// Per-column horizontal alignment. Numeric/badge columns center; identifiers
+// and free-text driver column align left.
+const COL_ALIGN = {
+  Patient_ID: 'left',
+  demographics: 'center',
+  Severity: 'center',
+  Stage_1_Admission_Risk: 'center',
+  Stage_2_Readmission_Risk: 'center',
+  driver: 'left',
 };
+
+const ROW_HEIGHT = 72;
+const TILE_LIMIT = 60;
 
 export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA, openSlideOut }) {
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [sorting, setSorting] = useState([{ id: 'Stage_1_Admission_Risk', desc: true }]);
-  const [density, setDensity] = useState('comfortable'); // 'comfortable' | 'compact'
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'tiles'
   const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
   const tableContainerRef = useRef(null);
 
@@ -73,7 +76,6 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
       accessorKey: 'Patient_ID',
       header: 'ID',
       enableSorting: true,
-      size: COL_WIDTHS.Patient_ID,
       cell: ({ getValue }) => (
         <span style={{ fontWeight: 600, color: 'var(--text-main)', fontFamily: 'Manrope, sans-serif' }}>
           {getValue()}
@@ -84,15 +86,17 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
       id: 'demographics',
       header: 'Demographics',
       enableSorting: false,
-      size: COL_WIDTHS.demographics,
-      cell: ({ row }) => `${row.original.Age} yrs • ${row.original.Sex}`,
+      cell: ({ row }) => (
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+          {row.original.Age} yrs · {row.original.Sex}
+        </span>
+      ),
     },
     {
       id: 'Severity',
       accessorKey: 'Severity',
       header: 'Severity',
       enableSorting: true,
-      size: COL_WIDTHS.Severity,
       sortingFn: severityOrderSortFn,
       cell: ({ getValue }) => {
         const severity = getValue();
@@ -107,42 +111,44 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     {
       id: 'Stage_1_Admission_Risk',
       accessorKey: 'Stage_1_Admission_Risk',
-      header: 'Adm. Risk',
+      header: 'Admission risk',
       enableSorting: true,
-      size: COL_WIDTHS.Stage_1_Admission_Risk,
-      cell: ({ getValue }) => (
-        <span className="display-num">{(getValue() * 100).toFixed(1)}%</span>
-      ),
+      cell: ({ getValue }) => {
+        const v = getValue();
+        const flagged = v >= thresholds.admission;
+        return (
+          <span className="display-num" style={{ color: flagged ? 'var(--danger)' : 'var(--text-main)' }}>
+            {(v * 100).toFixed(1)}%
+          </span>
+        );
+      },
     },
     {
       id: 'Stage_2_Readmission_Risk',
-      // null → undefined so TanStack's sortUndefined: 'last' kicks in (always
-      // sorts undefined to the end regardless of asc/desc).
+      // null → undefined so TanStack's sortUndefined: 'last' kicks in regardless of asc/desc.
       accessorFn: (row) => row.Stage_2_Readmission_Risk ?? undefined,
-      header: 'Readmit Risk',
+      header: 'Readmission risk',
       enableSorting: true,
       sortUndefined: 'last',
-      size: COL_WIDTHS.Stage_2_Readmission_Risk,
       cell: ({ getValue }) => {
         const v = getValue();
-        return v != null ? (
-          <span className="display-num" style={{ color: v >= thresholds.readmission ? 'var(--warning)' : 'var(--text-main)' }}>
+        if (v == null) return <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>N/A</span>;
+        const flagged = v >= thresholds.readmission;
+        return (
+          <span className="display-num" style={{ color: flagged ? 'var(--warning)' : 'var(--text-main)' }}>
             {(v * 100).toFixed(1)}%
           </span>
-        ) : (
-          <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>N/A</span>
         );
       },
     },
     {
       id: 'driver',
-      header: 'Primary Driver',
+      header: 'Primary driver',
       enableSorting: false,
-      size: COL_WIDTHS.driver,
       cell: ({ row }) => {
         const drivers = row.original.Top_Risk_Drivers;
         return drivers && drivers.length > 0 ? (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
             <AlertCircle size={14} /> {drivers[0].split(' (+')[0]}
           </span>
         ) : (
@@ -162,22 +168,23 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   });
 
   const { rows } = table.getRowModel();
-  const rowHeight = density === 'compact' ? 52 : 76;
 
-  // Sibling list for slideout arrow-key navigation — Patient_IDs in the
-  // current sort/filter/search order. Recomputed only when the row model
-  // changes; the array reference stays stable per render so React props
-  // diff is cheap.
+  // Sibling list for slideout arrow-key navigation — Patient_IDs in current
+  // sort/filter/search order. Memoized; reference stable per render.
   const siblings = useMemo(() => rows.map(r => r.original.Patient_ID), [rows]);
   const openWithSiblings = useCallback(
     (patient) => openSlideOut(patient, siblings),
     [openSlideOut, siblings]
   );
 
+  // Top-N tile slice. Tiles aren't virtualized — we cap to TILE_LIMIT so the
+  // grid stays browsable rather than overwhelming.
+  const tileItems = useMemo(() => rows.slice(0, TILE_LIMIT), [rows]);
+
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
     getScrollElement: () => tableContainerRef.current,
-    estimateSize: () => rowHeight,
+    estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
 
@@ -223,15 +230,14 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     }
   };
 
-  // Re-focus the tracked row after virtualizer remounts. Without this, scrolling
-  // away from a focused row drops focus to <body>.
+  // Re-focus the tracked row after virtualizer remounts.
   useEffect(() => {
-    if (focusedRowIndex < 0) return;
+    if (focusedRowIndex < 0 || viewMode !== 'table') return;
     const el = tableContainerRef.current?.querySelector(`[data-row-index="${focusedRowIndex}"]`);
     if (el && document.activeElement !== el) {
       el.focus({ preventScroll: true });
     }
-  }, [focusedRowIndex, virtualRows.length]);
+  }, [focusedRowIndex, virtualRows.length, viewMode]);
 
   const sortIcon = (header) => {
     if (!header.column.getCanSort()) return null;
@@ -239,12 +245,162 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     if (dir === 'desc') return <ChevronDown size={14} />;
     if (dir === 'asc')  return <ChevronUp size={14} />;
     return (
-      <span style={{ display: 'inline-flex', flexDirection: 'column', opacity: 0.35, lineHeight: 0.7 }} aria-hidden="true">
+      <span style={{ display: 'inline-flex', flexDirection: 'column', opacity: 0.4, lineHeight: 0.7 }} aria-hidden="true">
         <ChevronUp size={10} />
         <ChevronDown size={10} />
       </span>
     );
   };
+
+  // ─── Tiles view (Step 4 retired the original 20-card grid; restored here
+  // post-feedback with a polished card design and a 60-tile cap). ────────
+  const renderTiles = () => (
+    <div className="tile-grid">
+      {tileItems.map(row => {
+        const p = row.original;
+        const sevClass = p.Severity.toLowerCase();
+        const admFlagged = p.Stage_1_Admission_Risk >= thresholds.admission;
+        const readmFlagged = p.Stage_2_Readmission_Risk !== null && p.Stage_2_Readmission_Risk >= thresholds.readmission;
+        const topDriver = p.Top_Risk_Drivers?.[0]?.split(' (+')[0];
+        return (
+          <button
+            type="button"
+            key={p.Patient_ID}
+            className={`patient-tile patient-tile--${sevClass}`}
+            onClick={() => openWithSiblings(p)}
+            aria-label={`View patient ${p.Patient_ID}`}
+          >
+            <div className="patient-tile__header">
+              <span className="patient-tile__id">{p.Patient_ID}</span>
+              <span className={`badge ${sevClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                <SeverityIcon severity={p.Severity} size={11} />
+                {p.Severity}
+              </span>
+            </div>
+            <div className="patient-tile__demographics">
+              {p.Age} yrs · {p.Sex === 'M' ? 'Male' : p.Sex === 'F' ? 'Female' : p.Sex}
+            </div>
+            <div className="patient-tile__metrics">
+              <div className="patient-tile__metric">
+                <span className="patient-tile__metric-label">Admission</span>
+                <span className={`patient-tile__metric-value ${admFlagged ? 'is-danger' : ''}`}>
+                  {(p.Stage_1_Admission_Risk * 100).toFixed(0)}<span className="patient-tile__metric-pct">%</span>
+                </span>
+              </div>
+              <div className="patient-tile__metric">
+                <span className="patient-tile__metric-label">Readmission</span>
+                <span className={`patient-tile__metric-value ${readmFlagged ? 'is-warning' : ''} ${p.Stage_2_Readmission_Risk == null ? 'is-na' : ''}`}>
+                  {p.Stage_2_Readmission_Risk != null
+                    ? <>{(p.Stage_2_Readmission_Risk * 100).toFixed(0)}<span className="patient-tile__metric-pct">%</span></>
+                    : 'N/A'}
+                </span>
+              </div>
+            </div>
+            {topDriver && (
+              <div className="patient-tile__driver">
+                <AlertCircle size={12} />
+                <span>{topDriver}</span>
+              </div>
+            )}
+          </button>
+        );
+      })}
+      {rows.length > TILE_LIMIT && (
+        <div className="tile-grid__cap-hint">
+          Showing top {TILE_LIMIT.toLocaleString()} of {rows.length.toLocaleString()}.
+          Switch to Table view for the full sorted list.
+        </div>
+      )}
+    </div>
+  );
+
+  // ─── Table view ──────────────────────────────────────────────────────
+  const renderTable = () => (
+    <div className="virtual-table-shell">
+      <div className="virtual-table-hint">
+        Sorted by <strong>{sorting[0]?.id.replace(/_/g, ' ').toLowerCase() || 'default'}</strong>
+        {sorting[0] && (sorting[0].desc ? ' (highest first)' : ' (lowest first)')}.
+        Click any column header to re-sort. Arrow keys to navigate rows.
+      </div>
+      <div ref={tableContainerRef} className="virtual-table-scroller">
+        <table className="virtual-data-grid" role="table">
+          <thead>
+            {table.getHeaderGroups().map(headerGroup => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map(header => {
+                  const canSort = header.column.getCanSort();
+                  const align = COL_ALIGN[header.column.id] || 'left';
+                  return (
+                    <th
+                      key={header.id}
+                      onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
+                      onKeyDown={canSort ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          header.column.toggleSorting();
+                        }
+                      } : undefined}
+                      tabIndex={canSort ? 0 : undefined}
+                      role={canSort ? 'button' : undefined}
+                      aria-sort={
+                        header.column.getIsSorted() === 'desc' ? 'descending' :
+                        header.column.getIsSorted() === 'asc'  ? 'ascending'  : 'none'
+                      }
+                      className={`pd-cell pd-cell-${align} ${canSort ? 'pd-cell-sortable' : ''}`}
+                    >
+                      <span className="pd-th-inner">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {sortIcon(header)}
+                      </span>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
+          </thead>
+          <tbody style={{ position: 'relative', height: `${totalSize}px`, display: 'block' }}>
+            {virtualRows.map(virtualRow => {
+              const row = rows[virtualRow.index];
+              const sevClass = `severity-${row.original.Severity.toLowerCase()}`;
+              return (
+                <tr
+                  key={row.id}
+                  data-row-index={virtualRow.index}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View patient ${row.original.Patient_ID}`}
+                  onClick={() => openWithSiblings(row.original)}
+                  onKeyDown={(e) => handleRowKeyDown(e, row, virtualRow.index)}
+                  onFocus={() => setFocusedRowIndex(virtualRow.index)}
+                  className={`virtual-row ${sevClass}`}
+                  style={{
+                    height: `${ROW_HEIGHT}px`,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
+                  {row.getVisibleCells().map(cell => {
+                    const align = COL_ALIGN[cell.column.id] || 'left';
+                    return (
+                      <td
+                        key={cell.id}
+                        className={`pd-cell pd-cell-${align}`}
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
     <div className="glass-card table-view-container" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -253,26 +409,26 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
           <h2><Activity color="var(--primary)" size={26} /> Patient Predictions</h2>
           <p>Showing {rows.length.toLocaleString()} matching patients</p>
         </div>
-        <div className="pred-view-toggle" role="group" aria-label="Row density">
+        <div className="pred-view-toggle" role="group" aria-label="View mode">
           <button
             type="button"
-            onClick={() => setDensity('comfortable')}
-            className={density === 'comfortable' ? 'active' : ''}
-            aria-pressed={density === 'comfortable'}
-            aria-label="Comfortable density"
-            title="Comfortable"
+            onClick={() => setViewMode('table')}
+            className={viewMode === 'table' ? 'active' : ''}
+            aria-pressed={viewMode === 'table'}
+            aria-label="Table view"
+            title="Table view"
           >
-            <Rows3 size={16} />
+            <List size={16} /> <span>Table</span>
           </button>
           <button
             type="button"
-            onClick={() => setDensity('compact')}
-            className={density === 'compact' ? 'active' : ''}
-            aria-pressed={density === 'compact'}
-            aria-label="Compact density"
-            title="Compact"
+            onClick={() => setViewMode('tiles')}
+            className={viewMode === 'tiles' ? 'active' : ''}
+            aria-pressed={viewMode === 'tiles'}
+            aria-label="Tiles view"
+            title="Tiles view"
           >
-            <AlignJustify size={16} />
+            <LayoutGrid size={16} /> <span>Tiles</span>
           </button>
         </div>
       </div>
@@ -300,98 +456,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
           />
         </div>
       ) : (
-        <div className="virtual-table-shell">
-          <div className="virtual-table-hint">
-            Sorted by <strong>{sorting[0]?.id.replace(/_/g, ' ').toLowerCase() || 'default'}</strong>
-            {sorting[0] && (sorting[0].desc ? ' (highest first)' : ' (lowest first)')}.
-            Click any column header to re-sort. Arrow keys to navigate rows.
-          </div>
-          <div ref={tableContainerRef} className="virtual-table-scroller">
-            <table className="virtual-data-grid">
-              <thead>
-                {table.getHeaderGroups().map(headerGroup => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map(header => {
-                      const canSort = header.column.getCanSort();
-                      const isLastCol = header.column.id === 'driver';
-                      return (
-                        <th
-                          key={header.id}
-                          onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
-                          onKeyDown={canSort ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                              e.preventDefault();
-                              header.column.toggleSorting();
-                            }
-                          } : undefined}
-                          tabIndex={canSort ? 0 : undefined}
-                          role={canSort ? 'button' : undefined}
-                          aria-sort={
-                            header.column.getIsSorted() === 'desc' ? 'descending' :
-                            header.column.getIsSorted() === 'asc'  ? 'ascending'  : 'none'
-                          }
-                          style={{
-                            width: header.getSize(),
-                            flex: isLastCol ? '1' : `0 0 ${header.getSize()}px`,
-                            cursor: canSort ? 'pointer' : 'default',
-                          }}
-                        >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {sortIcon(header)}
-                          </span>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </thead>
-              <tbody style={{ position: 'relative', height: `${totalSize}px`, display: 'block' }}>
-                {virtualRows.map(virtualRow => {
-                  const row = rows[virtualRow.index];
-                  return (
-                    <tr
-                      key={row.id}
-                      data-row-index={virtualRow.index}
-                      tabIndex={0}
-                      role="button"
-                      aria-label={`View patient ${row.original.Patient_ID}`}
-                      onClick={() => openWithSiblings(row.original)}
-                      onKeyDown={(e) => handleRowKeyDown(e, row, virtualRow.index)}
-                      onFocus={() => setFocusedRowIndex(virtualRow.index)}
-                      className="virtual-row"
-                      style={{
-                        height: `${rowHeight}px`,
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        transform: `translateY(${virtualRow.start}px)`,
-                        display: 'flex',
-                      }}
-                    >
-                      {row.getVisibleCells().map(cell => {
-                        const isLastCol = cell.column.id === 'driver';
-                        return (
-                          <td
-                            key={cell.id}
-                            style={{
-                              width: cell.column.getSize(),
-                              flex: isLastCol ? '1' : `0 0 ${cell.column.getSize()}px`,
-                              padding: density === 'compact' ? '0.55rem 1rem' : '1rem 1.5rem',
-                            }}
-                          >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        viewMode === 'tiles' ? renderTiles() : renderTable()
       )}
     </div>
   );
