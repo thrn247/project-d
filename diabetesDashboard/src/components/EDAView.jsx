@@ -7,6 +7,7 @@ import EmptyState from './EmptyState';
 import { labelFor } from '../featureLabels';
 import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
+import { useNumberTween } from '../hooks/useNumberTween';
 
 export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToPredictions }) {
   const tips = useMemo(() => getTips(thresholds), [thresholds]);
@@ -44,6 +45,13 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
     if (!data || data.length === 0) return 0;
     return (data.reduce((s, d) => s + (d.Stage_1_Admission_Risk || 0), 0) / data.length) * 100;
   }, [data]);
+
+  // KPI number tweens — ease the displayed value when filters change so the
+  // numbers feel coordinated with the chart re-render rather than snapping.
+  // Respects prefers-reduced-motion (snaps for those users).
+  const tweenedCohortCount = useNumberTween(filteredData.length, 450);
+  const tweenedAvgRisk = useNumberTween(metrics.avgRisk, 450);
+  const tweenedReadmitRate = useNumberTween(metrics.readmitRate, 450);
 
   const filtersActive = isFilterActive(filters);
   const activeFilterSummary = [
@@ -216,7 +224,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               </span>
               <Users size={20} color="var(--primary)" />
             </div>
-            <div className="value" style={{ fontSize: '3rem' }}>{filteredData.length.toLocaleString()}</div>
+            <div className="value" style={{ fontSize: '3rem' }}>{Math.round(tweenedCohortCount).toLocaleString()}</div>
             <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
               {filtersActive ? activeFilterSummary : 'All patients in cohort'}
             </p>
@@ -231,7 +239,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               <TrendingUp size={20} color="var(--primary)" />
             </div>
             <div className="value" style={{ fontSize: '3rem' }}>
-              {metrics.avgRisk.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+              {tweenedAvgRisk.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
               {filtersActive
@@ -249,7 +257,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               <AlertTriangle size={20} color="var(--warning)" />
             </div>
             <div className="value" style={{ fontSize: '3rem', color: 'var(--warning)' }}>
-              {metrics.readmitRate.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+              {tweenedReadmitRate.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
             </div>
             <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
               Percent of the {metrics.totalAdmitted.toLocaleString()} admitted expected to readmit
@@ -296,6 +304,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     radius={[6, 6, 0, 0]}
                     onClick={(d) => onAgeBandClick(d.name)}
                     cursor="pointer"
+                    animationDuration={400}
                   >
                     <LabelList
                       dataKey="count"
@@ -335,7 +344,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                       return [`${value.toLocaleString()} patients (${pct.toFixed(1)}% of cohort)`, 'Leading Influence'];
                     }}
                   />
-                  <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={14}>
+                  <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={14} animationDuration={400}>
                     {aggregatedDrivers.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={'url(#panelGradientGlobalX)'} />
                     ))}
@@ -393,6 +402,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     radius={[4, 4, 0, 0]}
                     onClick={(d) => onRiskBandClick(d.name)}
                     cursor="pointer"
+                    animationDuration={400}
                   >
                     {riskHistogramData.map((entry, index) => (
                       <Cell

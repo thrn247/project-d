@@ -377,7 +377,7 @@ export default function PatientSlideOut({
                             cursor={{ fill: 'var(--border-light)' }}
                             formatter={(value) => [`+${value.toFixed(1)}% Impact`, 'Contribution to risk']}
                           />
-                          <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={20}>
+                          <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={20} animationDuration={400}>
                             {activeDrivers.map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={'url(#patientDriverGradient)'} />
                             ))}
