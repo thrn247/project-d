@@ -1,7 +1,7 @@
 {
   "lr_admission": 0.6203952976360942,
-  "rf_admission": 0.6663182493559422,
-  "xgb_admission": 0.2831661909818649,
+  "rf_admission": 0.658829258686538,
+  "xgb_admission": 0.27102534770965575,
   "lr_readmission": 0.18662077142790673,
   "rf_readmission": 0.4225297775683441,
   "xgb_readmission": 0.3647543966770172,
