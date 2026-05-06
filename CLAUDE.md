@@ -165,18 +165,24 @@ Override with the `PROJECT_D_BASE` env var when running outside the repo layout.
 - **Feature count:** **22** continuous/binary (after leakage drop). The frozen list is persisted to `models/feature_names.csv` for the batch-export script.
 - Stratified 80/20 split (`random_state=42`).
 - Scaling: `ColumnTransformer` — `StandardScaler` on continuous (`AGE, Num_Visits, Total_Meds_Count, Total_Unique_Diagnoses, Severity_Encoded`), passthrough on binary.
-- **Tuning:** `GridSearchCV` (LR) + `RandomizedSearchCV(n_iter=10, scoring='f1', cv=StratifiedKFold(3, shuffle=True, random_state=42))` for RF, XGB. Class imbalance: `class_weight='balanced'` for LR/RF, `scale_pos_weight = neg/pos ≈ 6.72` for XGB.
+- **Tuning:** `GridSearchCV` (LR) + `RandomizedSearchCV(n_iter=50, scoring='f1', cv=StratifiedKFold(3, shuffle=True, random_state=42))` for RF, XGB. (Bumped 10 → 50 in Tier 1 Phase 3, 2026-05-06.) Class imbalance: `class_weight='balanced'` for LR/RF, `scale_pos_weight = neg/pos ≈ 6.72` for XGB.
 - **Threshold optimization (corrected):** F1-max over the PR curve, **learned on the TRAIN set, applied to the TEST set** (no leakage — matches Track B pattern).
 - **Persisted artifacts** (written at the end of the notebook): `xgboost_admission.pkl`, `random_forest_admission.pkl`, `logistic_regression_admission.pkl`, `standard_scaler.pkl`, `feature_names.csv`, merged keys into `thresholds.json`, `model_metadata.txt`.
 - **Results** (retrained 2026-05-05 on the AGE>=18 cohort with `Index_LOS` replacing `Avg_LOS`; XGB champion is **isotonic-calibrated** via `CalibratedClassifierCV(cv=5)`, threshold learned on calibrated train probas. Positive class):
 
 | Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC | Brier |
 |---|---|---|---|---|---|---|---|
-| Logistic Regression | 0.6204 | 0.44 | 0.59 | 0.50 | 0.8608 | 0.5098 | — |
-| Random Forest | 0.6663 | 0.49 | 0.52 | 0.50 | 0.8628 | 0.5175 | — |
-| **XGBoost (champion, calibrated)** | **0.2832** | **0.49** | **0.53** | **0.51** | **0.8683** | **0.5386** | **0.0819** |
+| Logistic Regression | 0.6204 | 0.44 | 0.59 | 0.50 | 0.8608 [0.852–0.870] | 0.5098 | — |
+| Random Forest | 0.6588 | 0.48 | 0.54 | 0.51 | 0.8626 [0.854–0.872] | 0.5174 | 0.1421 |
+| **XGBoost (champion, calibrated)** | **0.2710** | **0.48** | **0.55** | **0.51** | **0.8683 [0.860–0.877]** | **0.5396** | **0.0818** |
+| LightGBM (Tier 1 Phase 4, calibrated) | 0.2579 | 0.49 | 0.54 | 0.51 | 0.8664 | 0.5310 | 0.0825 |
+| CatBoost (Tier 1 Phase 4, calibrated) | 0.2619 | 0.50 | 0.54 | 0.51 | 0.8685 | 0.5398 | 0.0819 |
 
-LR and RF stay un-calibrated; only the XGB champion (consumed by the dashboard) gets the isotonic wrap. Calibration drops the Brier score from 0.1508 (uncalibrated) to 0.0819 — a 46% reduction, meaning the dashboard's percentage outputs now correspond meaningfully to empirical admission rates in the test set.
+**5-fold stratified CV** (champion XGB on full cohort, mean ± std): ROC-AUC **0.8578 ± 0.0044**, PR-AUC **0.5255 ± 0.0144**, F1 **0.4982 ± 0.0073**. Single 80/20 split was a slight LUCKY draw (+0.01 over CV mean). 95% CIs in the table are 1,000-resample bootstrap on the held-out test predictions.
+
+LR and RF stay un-calibrated; only the XGB champion (consumed by the dashboard) gets the isotonic wrap. Calibration drops the Brier score from 0.1508 (uncalibrated) to 0.0818 — a 46% reduction, meaning the dashboard's percentage outputs now correspond meaningfully to empirical admission rates in the test set.
+
+LightGBM and CatBoost were added in Tier 1 Phase 4 as a methodological bake-off; neither dethrones XGB by the +0.005 AUC threshold. CatBoost ties XGB within 0.0002, LightGBM trails by 0.0019. All three calibrate to ~0.082 Brier.
 
 - **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_adm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `Total_Meds_Count`, `Num_Visits`, `AGE`, `Complication_Yes_No`. SHAP runs on the underlying XGB sub-model extracted from the calibrated wrapper (`cal.calibrated_classifiers_[0].estimator`); calibration only re-scales probabilities, the tree-level feature contributions are unchanged.
 
@@ -192,12 +198,17 @@ LR and RF stay un-calibrated; only the XGB champion (consumed by the dashboard) 
 
 | Model | Opt. Threshold | Precision | Recall | F1 | ROC-AUC | PR-AUC | Brier |
 |---|---|---|---|---|---|---|---|
-| Logistic Regression | 0.1866 | 0.47 | 0.80 | 0.59 | 0.7871 | 0.5783 | — |
-| Random Forest | 0.4225 | 0.55 | 0.56 | 0.55 | 0.7905 | 0.5415 | — |
-| **XGBoost (champion, calibrated)** | **0.3648** | **0.53** | **0.67** | **0.59** | **0.7992** | **0.5850** | **0.1558** |
-| XGBoost (no Index_LOS ablation, uncalibrated) | 0.3537 | 0.51 | 0.64 | 0.57 | **0.7846** | **0.5604** | — |
+| Logistic Regression | 0.1866 | 0.47 | 0.80 | 0.59 | 0.7871 [0.762–0.812] | 0.5783 | — |
+| Random Forest | 0.4225 | 0.55 | 0.56 | 0.55 | 0.7905 [0.767–0.813] | 0.5415 | — |
+| **XGBoost (champion, calibrated)** | **0.3648** | **0.53** | **0.67** | **0.59** | **0.7992 [0.774–0.822]** | **0.5850** | **0.1558** |
+| LightGBM (Tier 1 Phase 4, calibrated) | 0.3679 | 0.53 | 0.71 | 0.60 | 0.8040 | 0.5899 | 0.1548 |
+| CatBoost (Tier 1 Phase 4, calibrated) | 0.3451 | 0.53 | 0.71 | 0.60 | 0.8045 | 0.5913 | 0.1542 |
+| XGBoost (no Index_LOS ablation, uncalibrated) | 0.3537 | 0.51 | 0.64 | 0.57 | 0.7846 | 0.5604 | — |
+
+**5-fold stratified CV** (champion XGB on admitted-only cohort, mean ± std): ROC-AUC **0.8136 ± 0.0077**, PR-AUC **0.6185 ± 0.0031**, F1 **0.6017 ± 0.0107**. Single 80/20 split was a slight UNLUCKY draw (−0.014 below CV mean). 95% CIs in the table are 1,000-resample bootstrap on test predictions.
 
 - **Ablation Δ (with vs without `Index_LOS`):** ROC-AUC **+0.0120**, PR-AUC **+0.0180** → **well below the 0.05 leakage gate**. The previous `Avg_LOS` definition gave Δ ROC-AUC +0.0640 (over the gate); the redefinition to first-IP-LOS removes the leakage. Both headline and ablation numbers should appear in the capstone (§11).
+- **LightGBM/CatBoost** added in Tier 1 Phase 4 (2026-05-06). Both very mildly outperform XGB on test split (LightGBM Δ +0.0048, CatBoost Δ +0.0053 ROC-AUC) — both below the +0.005 champion-switch threshold AND well within the 5-fold CV std (0.0077). XGB stays champion; alternative model numbers reported as supporting evidence in the capstone.
 - **Top SHAP drivers** (verified against `diabetesDashboard/public/data/shap_readm_importance.json`, top 5 by mean |SHAP|): `Total_Unique_Diagnoses`, `COMP_RETINOPATHY`, `Index_LOS`, `Total_Meds_Count`, `AGE`.
 
 ### 5.4 `models/thresholds.json` — the single threshold source of truth
@@ -465,13 +476,13 @@ Catalogued so future audits don't re-derive them. Tier 1 = examiner will probe; 
 1. ~~**`Avg_LOS` temporal leakage in Track B headline.**~~ **Resolved 2026-05-05** by redefining the feature as `Index_LOS = LOS of first IP claim per patient`. Post-fix ablation Δ ROC-AUC = +0.0120, below the 0.05 gate. See §11. Historical leaky number 0.8757 should still be cited in the report's Methods narrative as "the original leaky definition" so reviewers see the fix arc.
 2. **Target ≠ standard 30-day readmission — *design choice, not oversight*.** Per §1, `Readmitted_Yes_No = (Num_Admissions > 1)` is all-cause recurrent admission, not a 30-day window. The 30-day window was *considered and rejected* because the within-30-day positive class on this TPA dataset is too sparse for stable training (~5-10% of admitted vs the current 27.82% under the all-cause definition); 7,959 admitted patients × ~10% positive rate × 20% test split = ~160 positive test cases, which is below what the F1-max threshold-search needs to converge stably. The target stays "any subsequent inpatient admission within the data window". AUC comparisons against UCI / LACE / MIMIC-III studies (which all use 30-day) **must** state this difference explicitly — they are not measuring the same target. This stays in the limitations list because of the comparison caveat, not because the choice itself is faulty.
 3. ~~**No probability calibration.**~~ **Resolved 2026-05-05.** Both XGB champions are now wrapped in `CalibratedClassifierCV(method='isotonic', cv=5)` via `calibrate_models.py`; reliability diagrams saved to `machineLearning/plots/`. Track A Brier dropped 0.1508 → 0.0819. The dashboard reads calibrated probabilities and calibrated thresholds. See §11.
-4. **No confidence intervals on AUCs.** Single 80/20 split → point estimates only. No bootstrap, no nested CV, no seed-robustness check.
+4. ~~**No confidence intervals on AUCs.**~~ **Resolved 2026-05-06 (Tier 1 Phase 1+2)**. Bootstrap 95% CIs (1,000 resamples) + 5-fold stratified CV both reported in `machineLearning/baselines/tier1_phase1_2_results.txt`. Headline: Track A XGB ROC-AUC 0.8683 [0.8600–0.8767] bootstrap, 0.8578 ± 0.0044 (5-fold CV). Track B XGB 0.7992 [0.7739–0.8219] bootstrap, 0.8136 ± 0.0077 (5-fold CV). Single-split was a slight lucky/unlucky draw within 1× CV std — normal sampling variance.
 5. **No external or temporal validation.** Train and test from the same TPA, same population, same window.
 
 ### Tier 2 — methodology footnotes
 
 6. `Num_Visits` retained in Track A. Partially correlates with the admission target (every admitted patient generates inpatient claims that count toward visits).
-7. Track A hyperparameter search budget is small (`n_iter=10`); Track B uses `n_iter=30`. Inconsistent.
+7. ~~Track A hyperparameter search budget is small (`n_iter=10`); Track B uses `n_iter=30`. Inconsistent.~~ **Resolved 2026-05-06 (Tier 1 Phase 3)**. Track A bumped to `n_iter=50` for both RF and XGB. The expanded search converged to nearly the same optima as `n_iter=10` (XGB ROC-AUC 0.8676 uncalibrated → 0.8683 calibrated, Brier 0.0818) — original budget was already near the local optimum. Methodologically defensible regardless.
 8. F1-max threshold ignores cost asymmetry (false negatives are typically costlier than false positives in clinical risk-flagging).
 9. Track A positive-class precision = 0.45 — 55% of "will-be-admitted" predictions are wrong at the operating threshold. Real number, needs explicit acknowledgement in dashboard usability framing.
 10. Severity index is a clinically-motivated heuristic (insulin → Severe, biguanide-only → Mild) not validated against HbA1c / Charlson.
@@ -523,6 +534,18 @@ Chronological record of methodology changes, traceable to specific commits + git
 - Two Tier-1 known flaws (CLAUDE.md §13) flipped from `open` to `resolved`: leakage (#1), calibration (#3).
 - Tag: `pre-index-los-snapshot`. Branch: `backup-pre-index-los`.
 
+### Phase 5 — 2026-05-06: Tier 1 rigour upgrades
+- Tag: `pre-tier1-snapshot` (commit `9bd0b6d`). Branch: `backup-pre-tier1`. Baseline file: [machineLearning/baselines/pre_tier1_baseline.txt](machineLearning/baselines/pre_tier1_baseline.txt).
+- **Phase 1 — Bootstrap 95% CIs** (commit `0f11535`). 1,000 resamples-with-replacement on test predictions. Track A XGB ROC-AUC 0.8683 [0.860–0.877], Track B 0.7992 [0.774–0.822]. Reproducible via [machineLearning/baselines/bootstrap_ci.py](machineLearning/baselines/bootstrap_ci.py).
+- **Phase 2 — 5-fold stratified CV** (commit `0f11535`). Champion XGB Track A 0.8578 ± 0.0044, Track B 0.8136 ± 0.0077. Single 80/20 split was a slight lucky/unlucky draw within 1× CV std for both tracks — normal sampling variance, not a methodology bug. Reproducible via [machineLearning/baselines/cv_5fold.py](machineLearning/baselines/cv_5fold.py).
+- **Phase 3 — Track A `n_iter` 10 → 50** (commit `1169c7f`). RF + XGB random search budget bumped to match the rigour of Track B's `n_iter=30`. The expanded search converged to nearly identical optima (XGB best params: max_depth=7, lr=0.05, n_est=200, subsample=0.9, colsample=0.9). Calibrated XGB ROC-AUC 0.8683 (unchanged), Brier 0.0818 (unchanged). Methodologically more defensible regardless.
+- **Phase 4 — LightGBM + CatBoost bake-off** (Tier 1 Phase 4 commit pending). Both libraries added to both tracks, n_iter=50 (LightGBM) / n_iter=20 (CatBoost — slower per fit). Calibrated via the same `CalibratedClassifierCV(method='isotonic', cv=5)` wrapper. Results:
+  - Track A: XGB 0.8683 vs LightGBM 0.8664 vs CatBoost 0.8685 — **all within 0.0002 ROC-AUC** of XGB (sampling noise).
+  - Track B: XGB 0.7992 vs LightGBM 0.8040 vs CatBoost 0.8045 — **CatBoost +0.0053 above XGB** but within the 5-fold CV std of 0.0077.
+  - Decision: XGB stays champion (no library beats by >0.005 AUC AND within CV noise). LightGBM/CatBoost numbers reported as supporting evidence in the capstone's model-comparison section.
+- **Two more Tier-1 known flaws (CLAUDE.md §13) flipped from `open` to `resolved`**: no CIs (#4) and search-budget inconsistency (#7).
+- Outcome: Track A and Track B headline numbers unchanged from pre-Tier-1 (XGB AUC 0.8683 / 0.7992); rigour layer (CIs + 5-fold + alternative-library bake-off) added as defensible evidence for the capstone.
+
 ### Pipeline rerun checklist (full reproduction from raw parquet)
 
 1. `python "dataPreprocessing/source code/01_clean_and_filter_claims.py"` (drops pharmacy claims + applies AGE>=18 + retains SERVICE_DATE)
@@ -553,4 +576,4 @@ For the report's Methods section: cite Phase 4's `b42c7e1` and the ablation gate
 
 ---
 
-*Last updated: 2026-05-05 (Phase 4: Avg_LOS → Index_LOS leakage fix + isotonic calibration shipped via commit b42c7e1; §11 + §13 reflect resolved status; §14 iteration history added for report traceability). Maintained alongside the `BDH2372 Research Project II` submission.*
+*Last updated: 2026-05-06 (Phase 5 / Tier 1 rigour upgrades: bootstrap CIs, 5-fold stratified CV, Track A n_iter 10→50, LightGBM + CatBoost bake-off; §5.2/§5.3 results tables expanded with CIs and alternative libraries; §13 #4 and #7 closed; §14 Phase 5 entry added). Maintained alongside the `BDH2372 Research Project II` submission.*

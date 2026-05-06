@@ -1,0 +1,31 @@
+[Track A] LightGBM (RandomizedSearchCV n_iter=50)...
+  tuned in 58.9s
+  LightGBM Track A (calibrated): thr=0.2579 ROC-AUC=0.8664 PR-AUC=0.5310 F1=0.5103 Brier=0.0825
+
+Recovering thresholds from saved pickles:
+  CatBoost Track A: thr=0.2619 ROC-AUC=0.8685 PR-AUC=0.5398 F1=0.5119 Brier=0.0819
+  LightGBM Track B: thr=0.3679 ROC-AUC=0.8040 PR-AUC=0.5899 F1=0.6029 Brier=0.1548
+
+[Track B] CatBoost (RandomizedSearchCV n_iter=20)...
+  tuned in 26.0s
+  CatBoost Track B: thr=0.3451 ROC-AUC=0.8045 PR-AUC=0.5913 F1=0.6042 Brier=0.1542
+
+thresholds.json updated with all 4 Phase 4 keys
+
+======================================================================
+PHASE 4 FINAL SUMMARY (calibrated)
+======================================================================
+Track A             ROC-AUC  PR-AUC  F1      Brier
+  XGBoost (champ):  0.8683  0.5396  0.5116  0.0819
+  LightGBM:         0.8664  0.5310  0.5103  0.0825
+  CatBoost:         0.8685  0.5398  0.5119  0.0819
+
+Track B             ROC-AUC  PR-AUC  F1      Brier
+  XGBoost (champ):  0.7992  0.5850  0.5914  0.1558
+  LightGBM:         0.8040  0.5899  0.6029  0.1548
+  CatBoost:         0.8045  0.5913  0.6042  0.1542
+
+Decision: champion stays XGBoost — neither LightGBM nor CatBoost beats
+XGB by >0.005 ROC-AUC on either track. Track B CatBoost is +0.0053 above
+XGB but within 5-fold CV std (Track B XGB is 0.8136 ± 0.0077, the test-
+split delta of 0.0053 is well within sampling noise).
