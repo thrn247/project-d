@@ -133,11 +133,6 @@ All scripts assume the current working directory is `dataPreprocessing/source co
 - Interactive lookup (`input()` prompt) that resolves a `Patient_ID` back to `PATIENT_CODE` via `patient_id_key.xlsx`.
 - **Do not run in automation** (blocking stdin).
 
-### 4.8 `update_notebooks.py`
-- Utility for rewriting markdown cell titles ("Chunk N: ..." / "### STEP X:") across the preprocessing notebooks.
-- Strips emojis and legacy Gemini-era commentary.
-- Standalone — run only when harmonizing notebook docs, not in the data pipeline.
-
 ---
 
 ## 5. `machineLearning/` — detailed pipeline
