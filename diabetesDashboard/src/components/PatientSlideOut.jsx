@@ -3,7 +3,7 @@ import { X, User, Activity, AlertCircle, AlertTriangle, HeartPulse, Flame, Circl
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell } from 'recharts';
 import { labelFor, isModifiable } from '../featureLabels';
 import InfoTip from './InfoTip';
-import { TIPS } from '../copy';
+import { getTips } from '../copy';
 
 const SEVERITY_ICON_MAP = { Severe: Flame, Moderate: AlertTriangle, Mild: CircleDot };
 const SeverityIcon = ({ severity, size = 14 }) => {
@@ -90,6 +90,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
   const panelRef = useRef(null);
   const previousFocusRef = useRef(null);
   const [activeDriverTab, setActiveDriverTab] = useState('admission');
+  const tips = useMemo(() => getTips(thresholds), [thresholds]);
 
   // Pre-sort cohort risk scores once; used for percentile lookups when patients change.
   const sortedAdmissionRisks = useMemo(() => {
@@ -230,7 +231,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
                     <SeverityIcon severity={patient.Severity} size={12} />
                     {patient.Severity} Risk Profile
                   </span>
-                  <InfoTip text={TIPS.severity_logic.text} size={12} />
+                  <InfoTip text={tips.severity_logic.text} size={12} />
                 </div>
               </div>
             </div>
@@ -286,7 +287,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
             <h3 style={{ paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontFamily: 'Manrope, sans-serif' }}>
               <AlertCircle size={18} color="var(--danger)" /> Primary Predictive Drivers
               <InfoTip
-                text={activeDriverTab === 'admission' ? TIPS.patient_admission_drivers.text : TIPS.patient_readmission_drivers.text}
+                text={activeDriverTab === 'admission' ? tips.patient_admission_drivers.text : tips.patient_readmission_drivers.text}
                 size={14}
               />
             </h3>
@@ -401,7 +402,7 @@ export default function PatientSlideOut({ patient, isOpen, onClose, thresholds, 
                   <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
                       Action context
-                      <InfoTip text={TIPS.modifiable_drivers.text} size={11} />
+                      <InfoTip text={tips.modifiable_drivers.text} size={11} />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                       {activeDrivers.map(d => {

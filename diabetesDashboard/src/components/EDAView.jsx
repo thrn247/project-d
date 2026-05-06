@@ -4,10 +4,12 @@ import { Activity, Users, AlertTriangle, TrendingUp, Filter, ShieldAlert, BarCha
 import InfoTip from './InfoTip';
 import FilterChips from './FilterChips';
 import { labelFor } from '../featureLabels';
-import { TIPS } from '../copy';
+import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
 
 export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToPredictions }) {
+  const tips = useMemo(() => getTips(thresholds), [thresholds]);
+
   // Fully-filtered data — used by KPIs, cohort drivers, drill-down count.
   const filteredData = useMemo(() => applyFilters(data, filters), [data, filters]);
 
@@ -182,7 +184,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
         <div>
           <h2 style={{ margin: '0', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Manrope, sans-serif', fontSize: '1.75rem' }}>
             <Activity color="var(--primary)" size={28} /> Cohort Overview
-            <InfoTip text={TIPS.cohort_overview.text} size={16} />
+            <InfoTip text={tips.cohort_overview.text} size={16} />
           </h2>
           <p style={{ margin: '0.5rem 0 0', fontSize: '1rem', color: 'var(--text-muted)' }}>Filtered cohort summary and exploratory analysis</p>
         </div>
@@ -292,7 +294,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
                 Active Filter Cohort
-                <InfoTip text={TIPS.active_filter_cohort.text} size={13} />
+                <InfoTip text={tips.active_filter_cohort.text} size={13} />
               </span>
               <Users size={20} color="var(--primary)" />
             </div>
@@ -306,7 +308,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
                 Avg. Admission Risk
-                <InfoTip text={TIPS.avg_admission_risk.text} detail={TIPS.avg_admission_risk.detail} size={13} />
+                <InfoTip text={tips.avg_admission_risk.text} detail={tips.avg_admission_risk.detail} size={13} />
               </span>
               <TrendingUp size={20} color="var(--primary)" />
             </div>
@@ -324,7 +326,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
                 Readmission Conversion Rate
-                <InfoTip text={TIPS.readmit_conversion.text} detail={TIPS.readmit_conversion.detail} size={13} />
+                <InfoTip text={tips.readmit_conversion.text} detail={tips.readmit_conversion.detail} size={13} />
               </span>
               <AlertTriangle size={20} color="var(--warning)" />
             </div>
@@ -347,7 +349,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Activity size={16} color="var(--primary)" /> Admission Risk by Age Band
-              <InfoTip text={TIPS.age_band_chart.text} size={13} />
+              <InfoTip text={tips.age_band_chart.text} size={13} />
             </h3>
             <div style={{ width: '100%', height: '280px' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -399,7 +401,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldAlert size={16} color="var(--danger)" /> Most-Cited Risk Drivers (Cohort)
-              <InfoTip text={TIPS.cohort_drivers.text} detail={TIPS.cohort_drivers.detail} size={13} />
+              <InfoTip text={tips.cohort_drivers.text} detail={tips.cohort_drivers.detail} size={13} />
             </h3>
             <div style={{ width: '100%', height: '280px' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -435,7 +437,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <BarChart2 size={16} color="var(--primary)" /> Admission Risk Distribution
-              <InfoTip text={TIPS.risk_distribution.text} detail={TIPS.risk_distribution.detail} size={13} />
+              <InfoTip text={tips.risk_distribution.text} detail={tips.risk_distribution.detail} size={13} />
             </h3>
             <div style={{ width: '100%', height: '280px' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -497,7 +499,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
             <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Users size={16} color="var(--primary)" /> Severity × Sex Matrix
-              <InfoTip text={TIPS.severity_sex_matrix.text} size={13} />
+              <InfoTip text={tips.severity_sex_matrix.text} size={13} />
             </h3>
             <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gridTemplateRows: '36px repeat(3, 1fr)', gap: '6px', height: '244px' }}>
               <div />
