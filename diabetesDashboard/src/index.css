@@ -904,3 +904,84 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   color: var(--text-muted);
   font-size: 0.85rem;
 }
+
+/* ─── Virtualized data grid (Step 4) ───────────────────────────────────
+   PredictionsDirectory's table now uses TanStack Table + react-virtual.
+   Rows are absolute-positioned inside a fixed-height tbody; the table
+   uses display:block and flex-row layout so widths can be controlled per
+   column without relying on browser table layout. Header is sticky to
+   the top of the scroller. Density toggle swaps row height + cell
+   padding (76px comfortable, 52px compact).
+   ──────────────────────────────────────────────────────────────────── */
+.virtual-table-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.virtual-table-hint {
+  padding: 0.55rem 1.5rem;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-light);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+.virtual-table-scroller {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: auto;
+  position: relative;
+  min-height: 300px;
+}
+.virtual-data-grid {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  min-width: 940px;
+}
+.virtual-data-grid thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 5;
+  display: block;
+  border-bottom: 1px solid var(--border-light);
+}
+.virtual-data-grid thead tr { display: flex; }
+.virtual-data-grid th {
+  display: flex;
+  align-items: center;
+  padding: 0.85rem 1.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  outline: none;
+  user-select: none;
+  text-align: left;
+  background: var(--bg-card);
+}
+.virtual-data-grid th:hover { color: var(--text-main); }
+.virtual-data-grid th:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  border-radius: 4px;
+}
+.virtual-row {
+  border-bottom: 1px solid var(--border-light);
+  background: transparent;
+  transition: background 0.12s ease;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.92rem;
+  color: var(--text-main);
+}
+.virtual-row:hover { background: var(--bg-surface); }
+.virtual-row:focus-visible {
+  background: var(--bg-surface);
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
