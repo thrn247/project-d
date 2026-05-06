@@ -1,8 +1,8 @@
 import React, { useMemo, Fragment } from 'react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
-import { Activity, Users, AlertTriangle, TrendingUp, Filter, ShieldAlert, BarChart2, Search } from 'lucide-react';
+import { Activity, Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart2, Search } from 'lucide-react';
 import InfoTip from './InfoTip';
-import FilterChips from './FilterChips';
+import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import { labelFor } from '../featureLabels';
 import { getTips } from '../copy';
@@ -53,17 +53,9 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
     filters.riskBand !== null && `Risk: ${filters.riskBand}`,
   ].filter(Boolean).join(' · ');
 
-  // Cohort vs full-dataset summary stats — feeds the natural-language summary line
-  // shown above the KPIs whenever cross-filters are active.
-  const globalPredictedAdmittedPct = useMemo(() => {
-    if (!data || data.length === 0) return 0;
-    return (data.filter(d => d.Predicted_Admission === 1).length / data.length) * 100;
-  }, [data]);
-
-  const cohortPredictedAdmittedPct = useMemo(() => {
-    if (!filteredData || filteredData.length === 0) return 0;
-    return (filteredData.filter(d => d.Predicted_Admission === 1).length / filteredData.length) * 100;
-  }, [filteredData]);
+  // (cohortPredictedAdmittedPct + globalPredictedAdmittedPct previously lived here;
+  // now computed inside CohortFilterBar so the cohort summary banner can be
+  // self-contained.)
 
   const ageRiskData = useMemo(() => {
     const buckets = {
@@ -181,82 +173,27 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
   return (
     <div className="glass-card table-view-container" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
 
-      <div style={{ padding: '2.5rem', borderBottom: '1px solid var(--border-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1.5rem' }}>
+      <div className="card-title-row">
         <div>
-          <h2 style={{ margin: '0', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Manrope, sans-serif', fontSize: '1.75rem' }}>
-            <Activity color="var(--primary)" size={28} /> Cohort Overview
+          <h2>
+            <Activity color="var(--primary)" size={26} /> Cohort Overview
             <InfoTip text={tips.cohort_overview.text} size={16} />
           </h2>
-          <p style={{ margin: '0.5rem 0 0', fontSize: '1rem', color: 'var(--text-muted)' }}>Filtered cohort summary and exploratory analysis</p>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', background: 'var(--bg-card)', padding: '0.75rem 1.5rem', borderRadius: '14px', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)', fontWeight: '500' }}>
-            <Filter size={18} /> Filters:
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Gender</span>
-            <select
-              value={filters.gender}
-              onChange={e => updateFilters({ gender: e.target.value })}
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-main)', border: '1px solid var(--border-light)', padding: '0.45rem', borderRadius: '8px', outline: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-            >
-              <option value="All">All Genders</option>
-              <option value="M">Male</option>
-              <option value="F">Female</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Severity</span>
-            <select
-              value={filters.severity}
-              onChange={e => updateFilters({ severity: e.target.value })}
-              style={{ background: 'var(--bg-surface)', color: 'var(--text-main)', border: '1px solid var(--border-light)', padding: '0.45rem', borderRadius: '8px', outline: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-            >
-              <option value="All">All Severities</option>
-              <option value="Severe">Severe Risk</option>
-              <option value="Moderate">Moderate Risk</option>
-              <option value="Mild">Mild Risk</option>
-            </select>
-          </div>
+          <p>Filtered cohort summary and exploratory analysis</p>
         </div>
       </div>
 
+      <CohortFilterBar
+        data={data}
+        filters={filters}
+        updateFilters={updateFilters}
+        clearAllFilters={clearAllFilters}
+        variant="eda"
+        topDriverLabel={aggregatedDrivers[0]?.label}
+        onJumpToPredictions={onJumpToPredictions}
+      />
+
       <div style={{ padding: '3rem' }}>
-
-        <FilterChips
-          filters={filters}
-          updateFilters={updateFilters}
-          clearAllFilters={clearAllFilters}
-          totalCount={filteredData.length}
-          onJumpToPredictions={onJumpToPredictions}
-        />
-
-        {filtersActive && filteredData.length > 0 && (
-          <div style={{
-            background: 'var(--bg-card)',
-            border: '1px solid var(--border-light)',
-            borderRadius: '0.75rem',
-            padding: '0.95rem 1.25rem',
-            marginBottom: '2rem',
-            fontSize: '0.9rem',
-            lineHeight: 1.6,
-            color: 'var(--text-main)',
-            boxShadow: 'var(--glass-shadow)',
-          }}>
-            <strong>{filteredData.length.toLocaleString()} patients</strong> in this filter
-            {' '}({((filteredData.length / data.length) * 100).toFixed(1)}% of cohort).{' '}
-            <strong style={{ color: cohortPredictedAdmittedPct > globalPredictedAdmittedPct ? 'var(--danger)' : 'var(--text-main)' }}>
-              {cohortPredictedAdmittedPct.toFixed(1)}% predicted admitted
-            </strong>{' '}
-            (vs {globalPredictedAdmittedPct.toFixed(1)}% across all {data.length.toLocaleString()} patients).
-            {aggregatedDrivers[0] && (
-              <> Most common driver: <strong>{aggregatedDrivers[0].label}</strong>.</>
-            )}
-          </div>
-        )}
 
         {filteredData.length === 0 ? (
           <div style={{ marginBottom: '3rem' }}>

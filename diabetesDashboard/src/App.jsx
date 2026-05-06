@@ -41,6 +41,7 @@ export default function App() {
   const updateFilters = (patch) => setFilters(f => ({ ...f, ...patch }));
   const clearAllFilters = () => setFilters(EMPTY_FILTERS);
   const onJumpToPredictions = () => setActiveTab('predictions');
+  const onJumpToEDA = () => setActiveTab('eda');
 
   if (loading) {
     return (
@@ -118,6 +119,7 @@ export default function App() {
                   filters={filters}
                   updateFilters={updateFilters}
                   clearAllFilters={clearAllFilters}
+                  onJumpToEDA={onJumpToEDA}
                 />
               : <EDAView
                   data={data}
