@@ -5,5 +5,9 @@
   "lr_readmission": 0.18662077142790673,
   "rf_readmission": 0.4225297775683441,
   "xgb_readmission": 0.3647543966770172,
-  "xgb_readmission_noLOS": 0.3537404537200928
+  "xgb_readmission_noLOS": 0.3537404537200928,
+  "lgb_admission": 0.2579297514789384,
+  "cb_admission": 0.261923283490965,
+  "lgb_readmission": 0.3678639827179366,
+  "cb_readmission": 0.34505065525089795
 }
