@@ -3,6 +3,7 @@ import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Ba
 import { Activity, Users, AlertTriangle, TrendingUp, Filter, ShieldAlert, BarChart2, Search } from 'lucide-react';
 import InfoTip from './InfoTip';
 import FilterChips from './FilterChips';
+import EmptyState from './EmptyState';
 import { labelFor } from '../featureLabels';
 import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
@@ -258,33 +259,13 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
         )}
 
         {filteredData.length === 0 ? (
-          <div style={{
-            background: 'var(--bg-card)',
-            borderRadius: '1.25rem',
-            border: '1px solid var(--border-light)',
-            boxShadow: 'var(--glass-shadow)',
-            padding: '4rem 2rem',
-            textAlign: 'center',
-            marginBottom: '3rem',
-          }}>
-            <Search size={48} color="var(--text-muted)" style={{ opacity: 0.4, marginBottom: '1rem' }} />
-            <h3 style={{ marginBottom: '0.5rem', color: 'var(--text-main)' }}>No patients match these filters</h3>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
-              Try removing the most restrictive filter, or clear them all to start exploring again.
-            </p>
-            <button
-              type="button"
-              onClick={clearAllFilters}
-              style={{
-                background: 'var(--primary)', color: '#fff', border: 'none',
-                padding: '0.75rem 1.5rem', borderRadius: '0.6rem',
-                cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600,
-                fontFamily: 'Inter, sans-serif', transition: 'var(--transition)',
-                boxShadow: '0 4px 12px var(--primary-glow)',
-              }}
-            >
-              Clear all filters
-            </button>
+          <div style={{ marginBottom: '3rem' }}>
+            <EmptyState
+              icon={Search}
+              title="No patients match these filters"
+              description="Try removing the most restrictive filter, or clear them all to start exploring again."
+              action={{ label: 'Clear all filters', onClick: clearAllFilters }}
+            />
           </div>
         ) : (<>
 
