@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useDeferredValue } from 'react';
 import { ChevronDown, ChevronUp, AlertCircle, AlertTriangle, TrendingUp, Activity, ChevronLeft, ChevronRight, Search, LayoutGrid, List, Flame, CircleDot } from 'lucide-react';
-import PatientSlideOut from './PatientSlideOut';
 import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import { applyFilters, isFilterActive } from '../filters';
@@ -24,18 +23,17 @@ const SeverityIcon = ({ severity, size = 14 }) => {
   return Icon ? <Icon size={size} /> : null;
 };
 
-export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA }) {
+export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA, openSlideOut }) {
   const [sortField, setSortField] = useState('Stage_1_Admission_Risk');
   const [sortDesc, setSortDesc] = useState(true);
-  
+
   // Search state — typing stays responsive while the expensive filter+sort uses
   // the deferred value so React can keep input updates high-priority.
   const [searchQuery, setSearchQuery] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
-  // Slideout state
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [isSlideOpen, setIsSlideOpen] = useState(false);
+  // (Slideout state was lifted to App.jsx in step 3 so the command palette
+  // can open a patient from any tab.)
 
   // View Toggle State (Stitch Grid Idea)
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
@@ -121,11 +119,6 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  }
-
-  const openSlideOut = (patient) => {
-    setSelectedPatient(patient);
-    setIsSlideOpen(true);
   }
 
   const getSortIcon = (field) => {
@@ -421,14 +414,6 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
           </div>
         )}
       </div>
-
-      <PatientSlideOut
-        patient={selectedPatient}
-        isOpen={isSlideOpen}
-        onClose={() => setIsSlideOpen(false)}
-        thresholds={thresholds}
-        data={data}
-      />
     </>
   );
 }

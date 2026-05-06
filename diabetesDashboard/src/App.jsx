@@ -4,7 +4,10 @@ import * as Tooltip from '@radix-ui/react-tooltip';
 import { Toaster } from 'sonner';
 import PredictionsDirectory from './components/PredictionsDirectory';
 import EDAView from './components/EDAView';
-import { Stethoscope, Activity, BarChart2, AlertCircle, HelpCircle, X } from 'lucide-react';
+import PatientSlideOut from './components/PatientSlideOut';
+import CommandPalette from './components/CommandPalette';
+import ShortcutsHelp from './components/ShortcutsHelp';
+import { Stethoscope, Activity, BarChart2, AlertCircle, HelpCircle, X, Command as CommandIcon } from 'lucide-react';
 import { EMPTY_FILTERS } from './filters';
 import './index.css';
 
@@ -16,9 +19,15 @@ export default function App() {
   const [thresholds, setThresholds] = useState({ admission: 0.6873, readmission: 0.3394 });
   const [loading, setLoading] = useState(true);
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   // Cross-filter state lifted to App so EDAView (chart click handlers) and
   // PredictionsDirectory (severity tabs + drill-down landing) share one source.
   const [filters, setFilters] = useState(EMPTY_FILTERS);
+  // Patient slideout state lifted to App in Step 3 so the command palette can
+  // open a patient from anywhere (any tab, any time).
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [isSlideOpen, setIsSlideOpen] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -42,6 +51,42 @@ export default function App() {
   const clearAllFilters = () => setFilters(EMPTY_FILTERS);
   const onJumpToPredictions = () => setActiveTab('predictions');
   const onJumpToEDA = () => setActiveTab('eda');
+  const openSlideOut = (patient) => { setSelectedPatient(patient); setIsSlideOpen(true); };
+  const closeSlideOut = () => setIsSlideOpen(false);
+
+  // Global keyboard shortcuts: Cmd/Ctrl+K opens palette; Cmd/Ctrl+1/2 jumps
+  // tabs; ? opens shortcuts help (suppressed when typing in inputs/textareas).
+  useEffect(() => {
+    const onKey = (e) => {
+      const target = e.target;
+      const inEditable = target && (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable
+      );
+      if ((e.metaKey || e.ctrlKey) && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault();
+        setPaletteOpen(o => !o);
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault();
+        setActiveTab('eda');
+        return;
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+        e.preventDefault();
+        setActiveTab('predictions');
+        return;
+      }
+      if (e.key === '?' && !inEditable && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setShortcutsOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   if (loading) {
     return (
@@ -100,6 +145,15 @@ export default function App() {
             <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: {data.length.toLocaleString()} Profiles</span>
             <button
               type="button"
+              onClick={() => setPaletteOpen(true)}
+              className="header-cmd-hint"
+              aria-label="Open command palette (Ctrl+K)"
+              title="Open command palette (Ctrl+K)"
+            >
+              <CommandIcon size={14} /> <span>K</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setAboutOpen(true)}
               className="icon-btn"
               aria-label="About this model"
@@ -120,6 +174,7 @@ export default function App() {
                   updateFilters={updateFilters}
                   clearAllFilters={clearAllFilters}
                   onJumpToEDA={onJumpToEDA}
+                  openSlideOut={openSlideOut}
                 />
               : <EDAView
                   data={data}
@@ -200,6 +255,28 @@ export default function App() {
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+
+      <PatientSlideOut
+        patient={selectedPatient}
+        isOpen={isSlideOpen}
+        onClose={closeSlideOut}
+        thresholds={thresholds}
+        data={data}
+      />
+
+      <CommandPalette
+        open={paletteOpen}
+        onOpenChange={setPaletteOpen}
+        data={data}
+        setActiveTab={setActiveTab}
+        setFilters={setFilters}
+        clearAllFilters={clearAllFilters}
+        openSlideOut={openSlideOut}
+        slideoutOpen={isSlideOpen}
+        onSlideoutClose={closeSlideOut}
+      />
+
+      <ShortcutsHelp open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <Toaster richColors position="bottom-right" theme="light" />
     </Tooltip.Provider>

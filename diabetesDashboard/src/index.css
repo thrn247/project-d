@@ -708,3 +708,199 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+
+/* Header ⌘K hint button. Visible cue that the command palette exists. */
+.header-cmd-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  color: var(--text-muted);
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.header-cmd-hint:hover {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  border-color: var(--text-muted);
+}
+.header-cmd-hint:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+.header-cmd-hint span {
+  font-family: 'Manrope', sans-serif;
+  letter-spacing: 0.04em;
+}
+
+/* ─── cmdk Command Palette (Step 3) ──────────────────────────────────
+   Uses Radix Dialog as the chrome (overlay + portal + focus trap +
+   scroll lock) and cmdk's headless primitives for the search-and-list
+   keyboard semantics. cmdk's Item highlight responds to up/down arrow
+   navigation automatically; we just style [data-selected="true"].
+   ───────────────────────────────────────────────────────────────── */
+.cmdk-shell {
+  position: fixed;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, 92vw);
+  max-height: 64vh;
+  background: var(--bg-card);
+  border-radius: 0.85rem;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
+  z-index: 201;
+  padding: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: radix-content-in 0.18s ease-out;
+  /* override the .radix-dialog-content centering transform we set elsewhere */
+}
+.cmdk-shell:focus { outline: none; }
+
+.cmdk-root { display: flex; flex-direction: column; min-height: 0; }
+
+.cmdk-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+.cmdk-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+.cmdk-input::placeholder { color: var(--text-muted); }
+.cmdk-esc-hint {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border-light);
+  letter-spacing: 0.05em;
+}
+
+.cmdk-list {
+  overflow-y: auto;
+  padding: 0.5rem;
+  flex: 1;
+  min-height: 0;
+}
+
+.cmdk-empty {
+  padding: 1.5rem 0.75rem;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.cmdk-group { padding: 0.25rem 0; }
+.cmdk-group [cmdk-group-heading] {
+  display: block;
+  padding: 0.45rem 0.75rem 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.cmdk-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  user-select: none;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.88rem;
+  color: var(--text-main);
+}
+.cmdk-item[data-selected="true"] {
+  background: var(--primary-container);
+  color: var(--primary);
+}
+.cmdk-item-main { flex: 1; }
+.cmdk-item-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.cmdk-item[data-selected="true"] .cmdk-item-meta { color: var(--primary); }
+.cmdk-item-meta--score {
+  font-weight: 700;
+  font-family: 'Manrope', sans-serif;
+}
+.cmdk-shortcut {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-surface);
+  padding: 0.18rem 0.42rem;
+  border-radius: 0.3rem;
+  border: 1px solid var(--border-light);
+  letter-spacing: 0.05em;
+}
+
+/* ─── Shortcuts help dialog (Step 3) ───────────────────────────────── */
+.shortcuts-dialog .shortcuts-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.shortcuts-dialog .shortcuts-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.85rem;
+  background: var(--bg-surface);
+  border-radius: 0.55rem;
+  font-size: 0.88rem;
+}
+.shortcuts-dialog .shortcut-keys {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: 'Inter', sans-serif;
+}
+.shortcuts-dialog .shortcut-keys kbd {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-card);
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--border-light);
+  letter-spacing: 0.04em;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+.shortcuts-dialog .shortcut-plus {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.shortcuts-dialog .shortcut-desc {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
