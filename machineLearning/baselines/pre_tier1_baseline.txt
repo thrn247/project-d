@@ -1,0 +1,88 @@
+Pre-Tier-1 Baseline Snapshot
+=============================
+Captured: 2026-05-06 (commit 3b34b34)
+Pipeline state: 2026-05-05 retrain (AGE>=18, Index_LOS, isotonic-calibrated XGB champions)
+
+Reference: machineLearning/csv/ml_ready_dataset.csv (61,406 rows, 26 columns)
+
+============================================================
+TRACK A — ADMISSION (target=Admitted_Yes_No)
+============================================================
+Test set: n=12,282, positives=1,592 (12.96%), neg/pos = 1:6.71
+
+Model: Logistic Regression
+  Threshold       = 0.6204
+  Confusion       : TN=9480 FP=1210 FN=652 TP=940
+  Accuracy        = 0.8484   Balanced Acc = 0.7386
+  Precision (PPV) = 0.4372   NPV          = 0.9356
+  Recall (Sens.)  = 0.5905   Specificity  = 0.8868
+  F1 (positive)   = 0.5024   MCC          = 0.4218
+  ROC-AUC         = 0.8608   PR-AUC       = 0.5098
+  Log loss        = 0.4987   Brier        = 0.1546
+
+Model: Random Forest
+  Threshold       = 0.6663
+  Confusion       : TN=9817 FP=873  FN=765 TP=827
+  Accuracy        = 0.8666   Balanced Acc = 0.7189
+  Precision (PPV) = 0.4865   NPV          = 0.9277
+  Recall (Sens.)  = 0.5195   Specificity  = 0.9183
+  F1 (positive)   = 0.5024   MCC          = 0.4258
+  ROC-AUC         = 0.8628   PR-AUC       = 0.5175
+  Log loss        = 0.4232   Brier        = 0.1416
+
+Model: XGBoost (champion, calibrated)
+  Threshold       = 0.2832
+  Confusion       : TN=9815 FP=875  FN=744 TP=848
+  Accuracy        = 0.8682   Balanced Acc = 0.7254
+  Precision (PPV) = 0.4922   NPV          = 0.9295
+  Recall (Sens.)  = 0.5327   Specificity  = 0.9181
+  F1 (positive)   = 0.5116   MCC          = 0.4360
+  ROC-AUC         = 0.8683   PR-AUC       = 0.5393
+  Log loss        = 0.2695   Brier        = 0.0819
+
+============================================================
+TRACK B — READMISSION (target=Readmitted_Yes_No, admitted-only)
+============================================================
+Test set: n=1,592, positives=443 (27.83%), neg/pos = 1:2.59
+
+Model: Logistic Regression
+  Threshold       = 0.1866
+  Confusion       : TN=742  FP=407 FN=89  TP=354
+  Accuracy        = 0.6884   Balanced Acc = 0.7224
+  Precision (PPV) = 0.4652   NPV          = 0.8929
+  Recall (Sens.)  = 0.7991   Specificity  = 0.6458
+  F1 (positive)   = 0.5880   MCC          = 0.3991
+  ROC-AUC         = 0.7871   PR-AUC       = 0.5783
+  Log loss        = 0.4952   Brier        = 0.1618
+
+Model: Random Forest
+  Threshold       = 0.4225
+  Confusion       : TN=944  FP=205 FN=197 TP=246
+  Accuracy        = 0.7475   Balanced Acc = 0.6884
+  Precision (PPV) = 0.5455   NPV          = 0.8273
+  Recall (Sens.)  = 0.5553   Specificity  = 0.8216
+  F1 (positive)   = 0.5503   MCC          = 0.3748
+  ROC-AUC         = 0.7905   PR-AUC       = 0.5415
+  Log loss        = 0.4868   Brier        = 0.1607
+
+Model: XGBoost (champion, calibrated)
+  Threshold       = 0.3648
+  Confusion       : TN=887  FP=262 FN=147 TP=296
+  Accuracy        = 0.7431   Balanced Acc = 0.7201
+  Precision (PPV) = 0.5305   NPV          = 0.8578
+  Recall (Sens.)  = 0.6682   Specificity  = 0.7720
+  F1 (positive)   = 0.5914   MCC          = 0.4134
+  ROC-AUC         = 0.7992   PR-AUC       = 0.5850
+  Log loss        = 0.4724   Brier        = 0.1558
+
+XGBoost no-Index_LOS ablation: Δ ROC-AUC = +0.0120 (below 0.05 leakage gate).
+============================================================
+
+Decision rules for accepting Tier 1 results:
+  - Phase 3 (Track A n_iter=50): keep if XGB ROC-AUC >= 0.8683 - 0.005 (i.e., >= 0.8633)
+  - Phase 4 (LightGBM/CatBoost): new champion only if AUC > XGB by >0.005 AND Brier competitive
+  - 5-fold CV: mean within 0.01 of the 80/20 numbers above; otherwise investigate
+
+Rollback markers:
+  - Tag:    pre-tier1-snapshot @ 3b34b34
+  - Branch: backup-pre-tier1   @ 3b34b34
