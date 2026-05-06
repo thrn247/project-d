@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import * as Dialog from '@radix-ui/react-dialog';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { Toaster } from 'sonner';
 import PredictionsDirectory from './components/PredictionsDirectory';
 import EDAView from './components/EDAView';
 import { Stethoscope, Activity, BarChart2, AlertCircle, HelpCircle, X } from 'lucide-react';
@@ -41,122 +44,115 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="app-container">
-        <div className="loading-screen">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-            <Activity color="var(--primary)" size={48} className="fast-spin" />
-            <h2>Loading Full Cohort Predictions (62k+ patients)...</h2>
-            <p style={{ color: 'var(--text-muted)' }}>Parsing machine learning inferences & SHAP values</p>
+      <Tooltip.Provider delayDuration={150}>
+        <div className="app-container">
+          <div className="loading-screen">
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+              <Activity color="var(--primary)" size={48} className="fast-spin" />
+              <h2>Loading Full Cohort Predictions (62k+ patients)...</h2>
+              <p style={{ color: 'var(--text-muted)' }}>Parsing machine learning inferences & SHAP values</p>
+            </div>
           </div>
         </div>
-      </div>
+        <Toaster richColors position="bottom-right" theme="light" />
+      </Tooltip.Provider>
     );
   }
 
   return (
-    <div className="app-container">
-      <header className="header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{
-            background: 'linear-gradient(135deg, var(--primary), #a78bfa)',
-            padding: '0.6rem',
-            borderRadius: '12px',
-            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-          }}>
-            <Stethoscope color="white" />
+    <Tooltip.Provider delayDuration={150}>
+      <div className="app-container">
+        <header className="header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, var(--primary), #a78bfa)',
+              padding: '0.6rem',
+              borderRadius: '12px',
+              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+            }}>
+              <Stethoscope color="white" />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.35rem', margin: '0' }}>Clinical Data & Prediction Insights</h1>
+              <p style={{ margin: '0', fontSize: '0.85rem' }}>Admission & Readmission Risk Explorer</p>
+            </div>
           </div>
-          <div>
-            <h1 style={{ fontSize: '1.35rem', margin: '0' }}>Clinical Data & Prediction Insights</h1>
-            <p style={{ margin: '0', fontSize: '0.85rem' }}>Admission & Readmission Risk Explorer</p>
+
+          <nav className="nav-links" style={{ padding: '0.5rem', background: 'var(--bg-surface)' }}>
+            <button
+              className={`nav-btn ${activeTab === 'eda' ? 'active' : ''}`}
+              onClick={() => setActiveTab('eda')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
+            >
+              <Activity size={16} /> Cohort Overview
+            </button>
+            <button
+              className={`nav-btn ${activeTab === 'predictions' ? 'active' : ''}`}
+              onClick={() => setActiveTab('predictions')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
+            >
+              <BarChart2 size={16} /> Patient Predictions
+            </button>
+          </nav>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: {data.length.toLocaleString()} Profiles</span>
+            <button
+              type="button"
+              onClick={() => setAboutOpen(true)}
+              className="icon-btn"
+              aria-label="About this model"
+              title="About this model"
+            >
+              <HelpCircle size={18} />
+            </button>
           </div>
-        </div>
+        </header>
 
-        <nav className="nav-links" style={{ padding: '0.5rem', background: 'var(--bg-surface)' }}>
-          <button
-            className={`nav-btn ${activeTab === 'eda' ? 'active' : ''}`}
-            onClick={() => setActiveTab('eda')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
-          >
-            <Activity size={16} /> Cohort Overview
-          </button>
-          <button
-            className={`nav-btn ${activeTab === 'predictions' ? 'active' : ''}`}
-            onClick={() => setActiveTab('predictions')}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
-          >
-            <BarChart2 size={16} /> Patient Predictions
-          </button>
-        </nav>
+        <main className="main-content" style={{ padding: '3rem' }}>
+          {data.length > 0 ? (
+            activeTab === 'predictions'
+              ? <PredictionsDirectory
+                  data={data}
+                  thresholds={thresholds}
+                  filters={filters}
+                  updateFilters={updateFilters}
+                  clearAllFilters={clearAllFilters}
+                />
+              : <EDAView
+                  data={data}
+                  thresholds={thresholds}
+                  filters={filters}
+                  updateFilters={updateFilters}
+                  clearAllFilters={clearAllFilters}
+                  onJumpToPredictions={onJumpToPredictions}
+                />
+          ) : (
+            <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
+              <AlertCircle size={48} color="var(--danger)" style={{ marginBottom: '1rem', opacity: 0.8 }} />
+              <h2>No batch results available</h2>
+              <p>Ensure the Python script has successfully written dashboard_payload.json</p>
+            </div>
+          )}
+        </main>
+      </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: {data.length.toLocaleString()} Profiles</span>
-          <button
-            type="button"
-            onClick={() => setAboutOpen(true)}
-            className="icon-btn"
-            aria-label="About this model"
-            title="About this model"
-          >
-            <HelpCircle size={18} />
-          </button>
-        </div>
-      </header>
-
-      <main className="main-content" style={{ padding: '3rem' }}>
-        {data.length > 0 ? (
-          activeTab === 'predictions'
-            ? <PredictionsDirectory
-                data={data}
-                thresholds={thresholds}
-                filters={filters}
-                updateFilters={updateFilters}
-                clearAllFilters={clearAllFilters}
-              />
-            : <EDAView
-                data={data}
-                thresholds={thresholds}
-                filters={filters}
-                updateFilters={updateFilters}
-                clearAllFilters={clearAllFilters}
-                onJumpToPredictions={onJumpToPredictions}
-              />
-        ) : (
-          <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
-            <AlertCircle size={48} color="var(--danger)" style={{ marginBottom: '1rem', opacity: 0.8 }} />
-            <h2>No batch results available</h2>
-            <p>Ensure the Python script has successfully written dashboard_payload.json</p>
-          </div>
-        )}
-      </main>
-
-      {/* About this model — methods note overlay */}
-      {aboutOpen && (
-        <div
-          onClick={() => setAboutOpen(false)}
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)',
-            zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '2rem',
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="about-model-heading"
-            style={{
-              background: 'var(--bg-card)', padding: '2.5rem', borderRadius: '1.25rem',
-              maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.25)',
-              border: '1px solid var(--border-light)',
-            }}
-          >
+      {/* About this model — methods note overlay (Radix Dialog).
+          Replaced the hand-rolled backdrop / click-outside / focus-trap with
+          Radix's primitives. Esc, focus return, scroll lock all built in. */}
+      <Dialog.Root open={aboutOpen} onOpenChange={setAboutOpen}>
+        <Dialog.Portal>
+          <Dialog.Overlay className="radix-dialog-overlay" />
+          <Dialog.Content className="radix-dialog-content" aria-describedby={undefined}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 id="about-model-heading" style={{ margin: 0, fontSize: '1.5rem' }}>About This Model</h2>
-              <button onClick={() => setAboutOpen(false)} className="icon-btn" aria-label="Close">
-                <X size={20} />
-              </button>
+              <Dialog.Title asChild>
+                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>About This Model</h2>
+              </Dialog.Title>
+              <Dialog.Close asChild>
+                <button className="icon-btn" aria-label="Close">
+                  <X size={20} />
+                </button>
+              </Dialog.Close>
             </div>
 
             <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--text-main)' }}>
@@ -199,9 +195,11 @@ export default function App() {
                 </ul>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      <Toaster richColors position="bottom-right" theme="light" />
+    </Tooltip.Provider>
   );
 }

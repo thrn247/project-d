@@ -2,6 +2,7 @@ import React, { useState, useMemo, useDeferredValue } from 'react';
 import { ChevronDown, ChevronUp, AlertCircle, AlertTriangle, TrendingUp, Activity, ChevronLeft, ChevronRight, Search, Download, LayoutGrid, List, Flame, CircleDot } from 'lucide-react';
 import PatientSlideOut from './PatientSlideOut';
 import FilterChips from './FilterChips';
+import EmptyState from './EmptyState';
 import { applyFilters, isFilterActive } from '../filters';
 
 // Build a filename slug encoding all active cross-filter dimensions, so users can
@@ -212,26 +213,14 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
           );
         })}
         {gridItems.length === 0 && (
-          <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
-            <Search size={48} style={{ opacity: 0.25, marginBottom: '1rem' }} />
-            <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-              No patients match the current filters or search.
-            </div>
-            {(isFilterActive(filters) || searchQuery) && (
-              <button
-                type="button"
-                onClick={() => { clearAllFilters(); setSearchQuery(''); setCurrentPage(1); }}
-                style={{
-                  marginTop: '0.75rem',
-                  background: 'var(--primary)', color: '#fff', border: 'none',
-                  padding: '0.55rem 1.1rem', borderRadius: '0.5rem',
-                  cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
-                  fontFamily: 'Inter, sans-serif',
-                }}
-              >
-                Clear filters & search
-              </button>
-            )}
+          <div style={{ gridColumn: '1 / -1' }}>
+            <EmptyState
+              icon={Search}
+              title="No patients match the current filters or search."
+              action={(isFilterActive(filters) || searchQuery)
+                ? { label: 'Clear filters & search', onClick: () => { clearAllFilters(); setSearchQuery(''); setCurrentPage(1); } }
+                : undefined}
+            />
           </div>
         )}
       </div>
@@ -443,26 +432,14 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
                 )})}
                 {processedData.length === 0 && (
                   <tr>
-                    <td colSpan="6" style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
-                      <Search size={48} style={{ opacity: 0.25, marginBottom: '1rem' }} />
-                      <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                        No patients match the current filters or search.
-                      </div>
-                      {(isFilterActive(filters) || searchQuery) && (
-                        <button
-                          type="button"
-                          onClick={() => { clearAllFilters(); setSearchQuery(''); setCurrentPage(1); }}
-                          style={{
-                            marginTop: '0.75rem',
-                            background: 'var(--primary)', color: '#fff', border: 'none',
-                            padding: '0.55rem 1.1rem', borderRadius: '0.5rem',
-                            cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
-                            fontFamily: 'Inter, sans-serif',
-                          }}
-                        >
-                          Clear filters & search
-                        </button>
-                      )}
+                    <td colSpan="6" style={{ padding: 0, background: 'transparent' }}>
+                      <EmptyState
+                        icon={Search}
+                        title="No patients match the current filters or search."
+                        action={(isFilterActive(filters) || searchQuery)
+                          ? { label: 'Clear filters & search', onClick: () => { clearAllFilters(); setSearchQuery(''); setCurrentPage(1); } }
+                          : undefined}
+                      />
                     </td>
                   </tr>
                 )}
