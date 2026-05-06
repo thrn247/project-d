@@ -542,15 +542,20 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
    bar to the top of .main-content's scroll viewport.
    ──────────────────────────────────────────────────────────────────── */
 
+/* Sticky filter bar — fully opaque so charts/table content scrolling beneath
+   stay clearly behind it. z-index: 30 sits above chart tooltips/labels (Recharts
+   renders its tooltip at z-1000 in a portal, but here we want the bar above
+   in-flow content which has no z-index of its own). The bar's bottom shadow
+   gives a clear "lifted" affordance once content scrolls under it.
+   z-index scale: 10 (cards) / 20 (overlays) / 30 (sticky bars) / 50 (header/dialogs). */
 .cohort-filter-bar {
   position: sticky;
   top: 0;
-  z-index: 40;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  z-index: 30;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-light);
   padding: 1rem 2rem;
+  box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.08);
 }
 
 .cohort-filter-bar__row {
@@ -769,14 +774,19 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .pred-view-toggle button {
   background: transparent;
   border: none;
-  padding: 0.4rem 0.6rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 0.4rem;
   color: var(--text-muted);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  gap: 0.4rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
   transition: var(--transition);
 }
+.pred-view-toggle button.active { font-weight: 600; }
 .pred-view-toggle button:hover { color: var(--text-main); }
 .pred-view-toggle button.active {
   background: var(--bg-card);
@@ -984,13 +994,12 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   font-size: 0.85rem;
 }
 
-/* ─── Virtualized data grid (Step 4) ───────────────────────────────────
-   PredictionsDirectory's table now uses TanStack Table + react-virtual.
-   Rows are absolute-positioned inside a fixed-height tbody; the table
-   uses display:block and flex-row layout so widths can be controlled per
-   column without relying on browser table layout. Header is sticky to
-   the top of the scroller. Density toggle swaps row height + cell
-   padding (76px comfortable, 52px compact).
+/* ─── Virtualized data grid (Step 4 + post-O4 redesign) ────────────────
+   PredictionsDirectory's table uses TanStack Table for sort/state and
+   @tanstack/react-virtual for row windowing. Header + rows share a CSS
+   Grid template so columns line up exactly, fill the container width,
+   and respect minmax sizing on narrow viewports. Per-column horizontal
+   alignment is set via .pd-cell-{left,center} classes from JSX.
    ──────────────────────────────────────────────────────────────────── */
 .virtual-table-shell {
   display: flex;
@@ -1016,7 +1025,6 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   width: 100%;
   border-collapse: collapse;
   display: block;
-  min-width: 940px;
 }
 .virtual-data-grid thead {
   position: sticky;
@@ -1024,43 +1032,208 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   background: var(--bg-card);
   z-index: 5;
   display: block;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 2px solid var(--border-light);
+  box-shadow: 0 1px 0 var(--border-light);
 }
-.virtual-data-grid thead tr { display: flex; }
-.virtual-data-grid th {
+
+/* Shared grid template — header + each virtualized row use the same
+   tracks so columns align exactly. minmax bounds keep the layout stable
+   on narrow viewports without forcing horizontal scroll for the common
+   ≥1024px case. */
+.virtual-data-grid thead tr,
+.virtual-row {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1fr)   /* Patient_ID */
+    minmax(120px, 1fr)   /* Demographics */
+    minmax(130px, 1fr)   /* Severity */
+    minmax(130px, 1fr)   /* Adm Risk */
+    minmax(140px, 1fr)   /* Readmit Risk */
+    minmax(220px, 3fr);  /* Driver */
+  align-items: stretch;
+}
+
+.pd-cell {
   display: flex;
   align-items: center;
-  padding: 0.85rem 1.5rem;
+  padding: 0 1.25rem;
   font-family: 'Inter', sans-serif;
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-main);
+  min-width: 0;        /* let grid items shrink instead of overflowing */
+}
+.pd-cell-left   { justify-content: flex-start; text-align: left; }
+.pd-cell-center { justify-content: center;     text-align: center; }
+
+.virtual-data-grid th.pd-cell {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-muted);
-  outline: none;
   user-select: none;
-  text-align: left;
-  background: var(--bg-card);
+  outline: none;
+  padding-top: 0.85rem;
+  padding-bottom: 0.85rem;
 }
-.virtual-data-grid th:hover { color: var(--text-main); }
-.virtual-data-grid th:focus-visible {
+.pd-cell-sortable          { cursor: pointer; }
+.pd-cell-sortable:hover    { color: var(--text-main); }
+.pd-cell-sortable:focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: -2px;
   border-radius: 4px;
 }
+.pd-th-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Row — flat by default with a thin left-edge severity accent that gives
+   a fast clinical scan without the visual weight of per-row colored
+   backgrounds. Hover lifts to bg-surface. */
 .virtual-row {
   border-bottom: 1px solid var(--border-light);
+  border-left: 4px solid transparent;
   background: transparent;
-  transition: background 0.12s ease;
+  transition: background 0.15s ease, border-left-color 0.15s ease;
   cursor: pointer;
   outline: none;
-  font-family: 'Inter', sans-serif;
-  font-size: 0.92rem;
-  color: var(--text-main);
 }
+.virtual-row.severity-severe   { border-left-color: var(--danger); }
+.virtual-row.severity-moderate { border-left-color: var(--warning); }
+.virtual-row.severity-mild     { border-left-color: var(--success); }
+
 .virtual-row:hover { background: var(--bg-surface); }
 .virtual-row:focus-visible {
   background: var(--bg-surface);
   outline: 2px solid var(--primary);
   outline-offset: -2px;
+}
+
+/* ─── Tile view (post-O4 redesign) ──────────────────────────────────
+   Restored after the user asked for the tile view back. Card per
+   patient, capped at TILE_LIMIT (60). Severity accent on the left
+   edge mirrors the table-row treatment for visual consistency.
+   ─────────────────────────────────────────────────────────────────── */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  align-content: start;
+}
+.tile-grid__cap-hint {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 0.85rem 1.25rem;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-light);
+  border-radius: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+.patient-tile {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 0.85rem;
+  padding: 1.15rem 1.25rem 1.15rem 1.4rem;
+  cursor: pointer;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.patient-tile::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 4px;
+  background: var(--severity-color, var(--primary));
+}
+.patient-tile--severe   { --severity-color: var(--danger); }
+.patient-tile--moderate { --severity-color: var(--warning); }
+.patient-tile--mild     { --severity-color: var(--success); }
+.patient-tile:hover {
+  border-color: var(--severity-color);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.08);
+}
+.patient-tile:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.patient-tile__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+.patient-tile__id {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-main);
+}
+.patient-tile__demographics {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.patient-tile__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+}
+.patient-tile__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.patient-tile__metric-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+}
+.patient-tile__metric-value {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--text-main);
+  line-height: 1;
+}
+.patient-tile__metric-value.is-danger  { color: var(--danger); }
+.patient-tile__metric-value.is-warning { color: var(--warning); }
+.patient-tile__metric-value.is-na      { font-size: 1rem; color: var(--text-muted); font-weight: 600; }
+.patient-tile__metric-pct {
+  font-size: 0.55em;
+  margin-left: 0.1em;
+  color: inherit;
+}
+.patient-tile__driver {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--danger);
+  font-size: 0.78rem;
+  font-weight: 500;
+  min-width: 0;
+}
+.patient-tile__driver span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
