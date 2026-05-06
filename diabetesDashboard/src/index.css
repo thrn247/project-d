@@ -238,28 +238,107 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .stat-box .label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .stat-box .value { font-size: 2rem; font-family: 'Manrope', sans-serif; font-weight: 800; color: var(--text-main); }
 
-/* Slide-Out Navigation Panel */
-.slide-backdrop {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
-  z-index: 100; opacity: 0; pointer-events: none;
-  transition: opacity 0.3s ease;
-}
-.slide-backdrop.open { opacity: 1; pointer-events: auto; }
-
-.slide-panel {
-  position: fixed; top: 0; right: -550px;
-  width: 550px; max-width: 100vw; height: 100vh;
+/* PatientSlideOut (Step 5 — wraps Radix Dialog).
+   The previous .slide-backdrop / .slide-panel rules with manual right:-550→0
+   transition were retired alongside the hand-rolled focus trap. Radix Dialog
+   handles overlay, focus trap, scroll lock, and Esc-to-close; we just style
+   .slideout-panel as the right-anchored content. */
+.slideout-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(620px, 100vw);
   background: var(--bg-card);
-  backdrop-filter: blur(25px);
   border-left: 1px solid var(--border-light);
-  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.4);
-  z-index: 101;
-  transition: right 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
-  display: flex; flex-direction: column;
+  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.3);
+  z-index: 201;
+  display: flex;
+  flex-direction: column;
+  outline: none;
 }
-.slide-panel.open { right: 0; }
+.slideout-panel[data-state="open"] {
+  animation: slideout-in 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+@keyframes slideout-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+@media (min-width: 1280px) { .slideout-panel { width: 660px; } }
+@media (min-width: 1600px) { .slideout-panel { width: 720px; } }
+
+.slideout-header {
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+.slideout-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.slideout-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Cohort baseline cards (Step 5 — promoted out of the drivers section). Two
+   cards side-by-side when readmission was predicted; single full-width card
+   when not. */
+.cohort-baseline-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+.cohort-baseline-grid.single { grid-template-columns: 1fr; }
+
+.baseline-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+}
+.baseline-card__heading {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.baseline-card__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.baseline-card__label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.baseline-card__value {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  font-size: 1.4rem;
+  color: var(--text-main);
+}
+.baseline-card__value--muted { color: var(--text-muted); }
+.baseline-card__delta {
+  margin-top: 0.55rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+.baseline-card__delta.above { color: var(--danger); }
+.baseline-card__delta.below { color: var(--success); }
 
 .icon-btn {
   background: var(--bg-surface);
