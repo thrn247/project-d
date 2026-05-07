@@ -642,34 +642,54 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .stat-box .label { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
 .stat-box .value { font-size: 2rem; font-family: 'Manrope', sans-serif; font-weight: 800; color: var(--text-main); }
 
-/* PatientSlideOut (Step 5 — wraps Radix Dialog).
-   The previous .slide-backdrop / .slide-panel rules with manual right:-550→0
-   transition were retired alongside the hand-rolled focus trap. Radix Dialog
-   handles overlay, focus trap, scroll lock, and Esc-to-close; we just style
-   .slideout-panel as the right-anchored content. */
+/* PatientSlideOut (Phase 2b — wraps vaul Drawer).
+   vaul handles the focus trap, scroll lock, Esc-to-close, drag-to-dismiss
+   physics, and the open/close transform animation. We only style the panel
+   surface here. The drawer's `direction` prop drives the data attribute
+   `data-vaul-drawer-direction` on the Content element; we branch CSS off
+   that to support both right-anchored (desktop) and bottom-anchored (mobile)
+   layouts.
+
+   Animation note: vaul applies inline `transform` styles during drag and
+   open/close. We deliberately do NOT redefine an `animation` keyframe here
+   (the previous `slideout-in` was removed when migrating from Radix Dialog)
+   so vaul's physics aren't fighting CSS keyframes. */
 .slideout-panel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  width: min(620px, 100vw);
   background: var(--bg-card);
-  border-left: 1px solid var(--border-light);
-  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.3);
   z-index: 201;
   display: flex;
   flex-direction: column;
   outline: none;
 }
-.slideout-panel[data-state="open"] {
-  animation: slideout-in 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+/* Right-anchored (desktop). */
+.slideout-panel[data-vaul-drawer-direction="right"] {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(620px, 100vw);
+  border-left: 1px solid var(--border-light);
+  box-shadow: -15px 0 40px rgba(0, 0, 0, 0.3);
 }
-@keyframes slideout-in {
-  from { transform: translateX(100%); }
-  to   { transform: translateX(0); }
+@media (min-width: 1280px) { .slideout-panel[data-vaul-drawer-direction="right"] { width: 660px; } }
+@media (min-width: 1600px) { .slideout-panel[data-vaul-drawer-direction="right"] { width: 720px; } }
+
+/* Bottom-anchored (mobile / tablet under 1024px). */
+.slideout-panel[data-vaul-drawer-direction="bottom"] {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 90vh;
+  border-top-left-radius: 1rem;
+  border-top-right-radius: 1rem;
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -15px 40px rgba(0, 0, 0, 0.3);
 }
-@media (min-width: 1280px) { .slideout-panel { width: 660px; } }
-@media (min-width: 1600px) { .slideout-panel { width: 720px; } }
+
+/* Slideout dialog title (small heading in the header bar). */
+.slideout-title { margin: 0; font-size: 1.05rem; }
 
 .slideout-header {
   padding: 1rem 1.5rem;
