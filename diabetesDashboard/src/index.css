@@ -663,12 +663,16 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 }
 
 /* Card layout helper — 0 padding + flex column. Used on glass-cards that
-   embed a sticky filter bar + scrolling content (EDAView, Predictions). */
+   embed a sticky filter bar + scrolling content (EDAView, Predictions).
+   .card-stack--scroll: the card itself becomes the scroll container, so
+   CohortFilterBar's `position: sticky` engages while inner content scrolls
+   beneath it (Phase 4a fix for nested-scroll bug on Predictions). */
 .card-stack {
   padding: 0;
   display: flex;
   flex-direction: column;
 }
+.card-stack--scroll { overflow-y: auto; }
 
 .glass-card:hover {
   transform: translateY(-2px);
@@ -926,13 +930,10 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .table-body-anim tr:nth-child(5) { animation-delay: 0.1s; }
 .table-body-anim tr:nth-child(n+6) { animation-delay: 0.12s; }
 
-/* Tile / grid view in PredictionsDirectory. Wrapped by .tile-scroll-host so
-   the grid scrolls inside the card shell (matching the table view's
-   .virtual-table-scroller behavior) instead of pushing past the card. */
+/* Tile / grid view in PredictionsDirectory. Phase 4a removed the inner
+   scroll — the parent .card-stack--scroll handles scroll for the whole
+   card, so this is just a padded wrapper now. */
 .tile-scroll-host {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
   padding: 1.5rem 2rem;
 }
 .tile-cap-hint {
@@ -1148,7 +1149,17 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
    renders its tooltip at z-1000 in a portal, but here we want the bar above
    in-flow content which has no z-index of its own). The bar's bottom shadow
    gives a clear "lifted" affordance once content scrolls under it.
-   z-index scale: 10 (cards) / 20 (overlays) / 30 (sticky bars) / 50 (header/dialogs). */
+   z-index scale: 10 (cards) / 20 (overlays) / 30 (sticky bars) / 50 (header/dialogs).
+
+   Phase 4a — adds a 1px sentinel above the bar (rendered as a sibling) and
+   a `.cohort-filter-bar--condensed` modifier toggled by IntersectionObserver
+   when the sentinel scrolls out of view. In condensed mode the bar shrinks
+   vertically and hides labels / cohort summary to save vertical space. */
+.cohort-filter-bar__sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
 .cohort-filter-bar {
   position: sticky;
   top: 0;
@@ -1157,6 +1168,22 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   border-bottom: 1px solid var(--border-light);
   padding: 1rem 2rem;
   box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.08);
+  transition: padding 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.cohort-filter-bar--condensed {
+  padding: 0.45rem 2rem;
+  box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.12);
+}
+.cohort-filter-bar--condensed .cohort-filter-bar__label {
+  display: none;
+}
+.cohort-filter-bar--condensed .cohort-filter-bar__summary {
+  display: none;
+}
+.cohort-filter-bar--condensed .cfb-dropdown-trigger {
+  font-size: 0.8rem;
+  padding: 0.32rem 0.6rem;
 }
 
 .cohort-filter-bar__row {
@@ -1603,10 +1630,9 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
    alignment is set via .pd-cell-{left,center} classes from JSX.
    ──────────────────────────────────────────────────────────────────── */
 .virtual-table-shell {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
+  /* Phase 4a: no longer the scroll container — that role moved up to
+     .card-stack--scroll. This wrapper just keeps the hint + table grouped. */
+  display: block;
 }
 .virtual-table-hint {
   padding: 0.55rem 1.5rem;
@@ -1614,13 +1640,6 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   border-bottom: 1px solid var(--border-light);
   font-size: 0.8rem;
   color: var(--text-muted);
-}
-.virtual-table-scroller {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: auto;
-  position: relative;
-  min-height: 300px;
 }
 .virtual-data-grid {
   width: 100%;

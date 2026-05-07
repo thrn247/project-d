@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AnimatePresence, motion } from 'motion/react';
 import { Filter, ChevronDown, X, ArrowRight, ArrowLeft, Download, Search } from 'lucide-react';
@@ -141,6 +141,23 @@ export default function CohortFilterBar({
   const filtersActive = isFilterActive(filters);
   const isPredictions = variant === 'predictions';
 
+  // Phase 4a — condensed sticky behaviour. A 1px sentinel sits above the bar;
+  // when it scrolls out of viewport (i.e. user has scrolled past the bar's
+  // initial position), the bar pins and switches to a slim mode. Uses
+  // IntersectionObserver instead of a scroll listener for performance.
+  const sentinelRef = useRef(null);
+  const [isCondensed, setIsCondensed] = useState(false);
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsCondensed(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
+
   // Cohort summary computations live here so the bar is self-sufficient and
   // identical across both tabs.
   const filteredData = useMemo(
@@ -162,7 +179,11 @@ export default function CohortFilterBar({
   }, [data, globalCount]);
 
   return (
-    <div className="cohort-filter-bar">
+    <>
+      {/* Sentinel: 1px above the bar; IntersectionObserver flips
+          isCondensed once it's scrolled out of view. */}
+      <div ref={sentinelRef} aria-hidden="true" className="cohort-filter-bar__sentinel" />
+    <div className={`cohort-filter-bar ${isCondensed ? 'cohort-filter-bar--condensed' : ''}`}>
       <div className="cohort-filter-bar__row">
         <div className="cohort-filter-bar__filters">
           <span className="cohort-filter-bar__label"><Filter size={14} /> Filter</span>
@@ -267,5 +288,6 @@ export default function CohortFilterBar({
         </div>
       )}
     </div>
+    </>
   );
 }
