@@ -2,7 +2,11 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import * as Tabs from '@radix-ui/react-tabs';
-import { MotionConfig } from 'motion/react';
+import { MotionConfig, AnimatePresence, motion } from 'motion/react';
+// eslint sees `motion` as unused because it's accessed via member expression
+// (motion.div) inside JSX, which the no-unused-vars rule doesn't trace. Alias
+// to a PascalCase constant so the JSX usage is unambiguous.
+const MotionDiv = motion.div;
 import { Toaster } from 'sonner';
 import PredictionsDirectory from './components/PredictionsDirectory';
 import EDAView from './components/EDAView';
@@ -188,29 +192,37 @@ export default function App() {
 
         <main className="main-content">
           {data.length > 0 ? (
-            <>
-              <Tabs.Content value="eda" className="tab-panel">
-                <EDAView
-                  data={data}
-                  thresholds={thresholds}
-                  filters={filters}
-                  updateFilters={updateFilters}
-                  clearAllFilters={clearAllFilters}
-                  onJumpToPredictions={onJumpToPredictions}
-                />
-              </Tabs.Content>
-              <Tabs.Content value="predictions" className="tab-panel">
-                <PredictionsDirectory
-                  data={data}
-                  thresholds={thresholds}
-                  filters={filters}
-                  updateFilters={updateFilters}
-                  clearAllFilters={clearAllFilters}
-                  onJumpToEDA={onJumpToEDA}
-                  openSlideOut={openSlideOut}
-                />
-              </Tabs.Content>
-            </>
+            <AnimatePresence mode="wait" initial={false}>
+              <MotionDiv
+                key={activeTab}
+                className="tab-panel"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.25, ease: [0.25, 0.8, 0.25, 1] }}
+              >
+                {activeTab === 'predictions' ? (
+                  <PredictionsDirectory
+                    data={data}
+                    thresholds={thresholds}
+                    filters={filters}
+                    updateFilters={updateFilters}
+                    clearAllFilters={clearAllFilters}
+                    onJumpToEDA={onJumpToEDA}
+                    openSlideOut={openSlideOut}
+                  />
+                ) : (
+                  <EDAView
+                    data={data}
+                    thresholds={thresholds}
+                    filters={filters}
+                    updateFilters={updateFilters}
+                    clearAllFilters={clearAllFilters}
+                    onJumpToPredictions={onJumpToPredictions}
+                  />
+                )}
+              </MotionDiv>
+            </AnimatePresence>
           ) : (
             <div className="empty-fallback">
               <AlertCircle size={48} color="var(--danger)" className="empty-fallback__icon" />
