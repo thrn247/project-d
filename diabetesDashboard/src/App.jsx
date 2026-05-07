@@ -122,10 +122,10 @@ export default function App() {
       <Tooltip.Provider delayDuration={150}>
         <div className="app-container">
           <div className="loading-screen">
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+            <div className="loading-stack">
               <Activity color="var(--primary)" size={48} className="fast-spin" />
               <h2>Loading Full Cohort Predictions (61k patients)...</h2>
-              <p style={{ color: 'var(--text-muted)' }}>Parsing machine learning inferences & SHAP values</p>
+              <p>Parsing machine learning inferences & SHAP values</p>
             </div>
           </div>
         </div>
@@ -140,13 +140,8 @@ export default function App() {
     <Tooltip.Provider delayDuration={150}>
       <div className="app-container">
         <header className="header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{
-              background: 'linear-gradient(135deg, var(--primary), #a78bfa)',
-              padding: '0.6rem',
-              borderRadius: '12px',
-              boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-            }}>
+          <div className="icon-row">
+            <div className="brand-tile">
               <Stethoscope color="white" />
             </div>
             <div>
@@ -155,24 +150,22 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="nav-links" style={{ padding: '0.5rem', background: 'var(--bg-surface)' }}>
+          <nav className="nav-links">
             <button
               className={`nav-btn ${activeTab === 'eda' ? 'active' : ''}`}
               onClick={() => setActiveTab('eda')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
             >
               <Activity size={16} /> Cohort Overview
             </button>
             <button
               className={`nav-btn ${activeTab === 'predictions' ? 'active' : ''}`}
               onClick={() => setActiveTab('predictions')}
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
             >
               <BarChart2 size={16} /> Patient Predictions
             </button>
           </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="icon-row">
             <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: {data.length.toLocaleString()} Profiles</span>
             <button
               type="button"
@@ -195,7 +188,7 @@ export default function App() {
           </div>
         </header>
 
-        <main className="main-content" style={{ padding: '3rem' }}>
+        <main className="main-content">
           {data.length > 0 ? (
             activeTab === 'predictions'
               ? <PredictionsDirectory
@@ -216,8 +209,8 @@ export default function App() {
                   onJumpToPredictions={onJumpToPredictions}
                 />
           ) : (
-            <div style={{ textAlign: 'center', padding: '5rem', color: 'var(--text-muted)' }}>
-              <AlertCircle size={48} color="var(--danger)" style={{ marginBottom: '1rem', opacity: 0.8 }} />
+            <div className="empty-fallback">
+              <AlertCircle size={48} color="var(--danger)" className="empty-fallback__icon" />
               <h2>No batch results available</h2>
               <p>Ensure the Python script has successfully written dashboard_payload.json</p>
             </div>
@@ -232,9 +225,9 @@ export default function App() {
         <Dialog.Portal>
           <Dialog.Overlay className="radix-dialog-overlay" />
           <Dialog.Content className="radix-dialog-content" aria-describedby={undefined}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div className="dialog-header">
               <Dialog.Title asChild>
-                <h2 style={{ margin: 0, fontSize: '1.5rem' }}>About This Model</h2>
+                <h2 className="dialog-h2">About This Model</h2>
               </Dialog.Title>
               <Dialog.Close asChild>
                 <button className="icon-btn" aria-label="Close">
@@ -243,34 +236,32 @@ export default function App() {
               </Dialog.Close>
             </div>
 
-            <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--text-main)' }}>
-              <p style={{ marginBottom: '1rem' }}>
+            <div className="dialog-body">
+              <p>
                 <strong>Two-stage XGBoost.</strong> Predicts (1) hospital admission and (2) all-cause inpatient
                 recurrence given admission. Both stages are gradient-boosted decision trees trained on a 61,406-patient
                 Type-2 diabetes cohort drawn from a Malaysian third-party-administrator claims dataset.
               </p>
-              <p style={{ marginBottom: '1rem' }}>
+              <p>
                 <strong>22 features per patient</strong> — age, sex, clinical severity, ten medication classes, five
                 diabetic complication flags, and counts of distinct diagnoses, medications, and clinical visits.
                 Decision thresholds were optimised by maximising F1 on the training fold ({(thresholds.admission * 100).toFixed(1)}%
                 admission, {(thresholds.readmission * 100).toFixed(1)}% readmission).
               </p>
-              <p style={{ marginBottom: '1.25rem' }}>
+              <p>
                 <strong>Performance.</strong> Admission ROC-AUC 0.865 (PR-AUC 0.534). Readmission ROC-AUC 0.876
                 (PR-AUC 0.763); ablated to 0.813 / 0.605 when length-of-stay is removed.
               </p>
 
-              <div style={{ borderTop: '1px solid var(--border-light)', paddingTop: '1.25rem' }}>
-                <p style={{ marginBottom: '0.75rem' }}>
-                  <strong>How to read this dashboard.</strong>
-                </p>
-                <ul style={{ paddingLeft: '1.25rem', marginBottom: 0, color: 'var(--text-main)' }}>
-                  <li style={{ marginBottom: '0.6rem' }}>
+              <div className="dialog-section-divider">
+                <p><strong>How to read this dashboard.</strong></p>
+                <ul>
+                  <li>
                     <strong>Threshold.</strong> A patient is flagged for admission once their score reaches{' '}
                     {(thresholds.admission * 100).toFixed(1)}%. Bars and badges turn red above this point. The
                     histogram on the Cohort Overview tab shows the threshold as a dashed reference line.
                   </li>
-                  <li style={{ marginBottom: '0.6rem' }}>
+                  <li>
                     <strong>Cross-filter.</strong> Click any chart segment (age band, risk bin, severity cell) to
                     filter the entire dashboard. Active filters appear as removable chips and the "View N in
                     Predictions" button jumps to the patient list with the same filters applied.

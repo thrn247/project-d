@@ -30,10 +30,403 @@
   --ambient-glow: 0 8px 32px rgba(2, 132, 199, 0.05);
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   --app-gradient: none;
+
+  /* DART brand & elevation scale (Phase 1 hoist).
+     The brand gradient was inlined on App.jsx's Stethoscope tile; the violet
+     accent doesn't have a counterpart in the pure-Stitch palette, so it gets
+     its own token rather than rolling under --primary-container.
+     Elevation scale follows the UI-UX-Pro-Max recommendation
+     (10 / 20 / 30 / 50 z-index scale; here as box-shadows). */
+  --accent-violet: #a78bfa;
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--accent-violet));
+  --shadow-brand: 0 4px 15px rgba(59, 130, 246, 0.4);
+  --elevation-1: 0 1px 3px rgba(15, 23, 42, 0.06);
+  --elevation-2: 0 8px 20px rgba(15, 23, 42, 0.08);
+  --elevation-3: 0 20px 50px rgba(15, 23, 42, 0.18);
 }
 
 @keyframes fast-spin { to { transform: rotate(360deg); } }
 .fast-spin { animation: fast-spin 0.9s linear infinite; transform-origin: center; }
+
+/* ───────────────────────────────────────────────────────────────────────
+   Phase 1 hoist (2026-05-07) — utility classes + component classes for
+   recurring inline-style patterns. Pattern frequency was audited against
+   154 inline style={{}} blocks; everything below was used in 2+ sites.
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* Layout utilities — tiny, composable */
+.row-between        { display: flex; justify-content: space-between; align-items: center; }
+.row-between-top    { display: flex; justify-content: space-between; align-items: flex-start; }
+.icon-row           { display: flex; align-items: center; gap: 1rem; }
+.icon-row-sm        { display: flex; align-items: center; gap: 0.5rem; }
+.icon-row-xs        { display: flex; align-items: center; gap: 0.35rem; }
+.col-gap-sm         { display: flex; flex-direction: column; gap: 0.4rem; }
+.kpi-grid           { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; }
+.charts-grid        { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2.5rem; }
+.chart-canvas       { width: 100%; height: 280px; }
+
+/* Component classes */
+.brand-tile {
+  background: var(--gradient-brand);
+  padding: 0.6rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-card {
+  background: var(--bg-card);
+  padding: 2rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--glass-shadow);
+}
+
+.chart-card-title {
+  margin-bottom: 1.5rem;
+  font-size: 1rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.section-h3 {
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-family: 'Manrope', sans-serif;
+}
+
+.surface-card {
+  background: var(--bg-surface-high);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-light);
+}
+.surface-card--inner {
+  background: var(--bg-surface-high);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-light);
+}
+
+.empty-message {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Typography utilities */
+.text-eyebrow {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.text-eyebrow--sm {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+}
+.text-meta          { font-size: 0.85rem; color: var(--text-muted); }
+.text-meta--small   { font-size: 0.8rem; color: var(--text-muted); }
+.text-stat-caption  { margin: 0; font-size: 0.95rem; color: var(--text-muted); }
+.text-id            { font-weight: 600; color: var(--text-main); font-family: 'Manrope', sans-serif; }
+.kpi-pct-suffix     { font-size: 0.55em; margin-left: 0.1em; }
+
+/* EDAView KPI value (the 3rem big number on each stat-box). */
+.kpi-value          { font-size: 3rem; }
+.kpi-value--warning { font-size: 3rem; color: var(--warning); }
+
+/* Stat-box label with inline InfoTip — used 3× on EDAView KPI tiles. */
+.kpi-tip-label      { display: inline-flex; align-items: center; }
+
+/* Cohort Distribution section header h2 (EDAView). */
+.section-divider-h2 {
+  padding-top: 1rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Severity x Sex matrix cell labels (EDAView heatmap). */
+.matrix-axis-label {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  align-self: center;
+}
+.matrix-row-label {
+  align-self: center;
+  font-size: 0.9rem;
+  color: var(--text-main);
+  font-weight: 600;
+}
+.matrix-cell-value {
+  font-size: 1.4rem;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+  color: var(--text-main);
+}
+.severity-matrix {
+  display: grid;
+  grid-template-columns: 90px 1fr 1fr;
+  grid-template-rows: 36px repeat(3, 1fr);
+  gap: 6px;
+  height: 244px;
+}
+
+/* EDAView card body padding (sits below the sticky filter bar). */
+.eda-card-body { padding: 3rem; }
+
+/* sr-only — visually hidden but readable to screen readers (used by
+   Dialog.Title in the cmdk palette where the title is decorative). */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* App.jsx-specific small classes (Phase 1 hoist). */
+.loading-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.empty-fallback {
+  text-align: center;
+  padding: 5rem;
+  color: var(--text-muted);
+}
+.empty-fallback__icon {
+  margin-bottom: 1rem;
+  opacity: 0.8;
+}
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+.dialog-h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+.dialog-h2--with-icon {
+  font-size: 1.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* EmptyState — shared empty/no-results panel (used by EDAView and
+   PredictionsDirectory in both views). */
+.empty-state {
+  background: var(--bg-card);
+  border-radius: 1.25rem;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--glass-shadow);
+  padding: 4rem 2rem;
+  text-align: center;
+}
+.empty-state__icon {
+  color: var(--text-muted);
+  opacity: 0.4;
+  margin-bottom: 1rem;
+}
+.empty-state__title {
+  margin-bottom: 0.5rem;
+  color: var(--text-main);
+}
+.empty-state__description {
+  color: var(--text-muted);
+  max-width: 420px;
+  margin: 0 auto 1.5rem;
+}
+.empty-state__action {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.6rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  transition: var(--transition);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+.empty-state__action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px var(--primary-glow);
+}
+
+/* About-dialog body — encapsulates paragraph + list + divider spacing so
+   the About-this-Model dialog body can drop ~9 marginBottom inline styles. */
+.dialog-body {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text-main);
+}
+.dialog-body p              { margin-bottom: 1rem; }
+.dialog-body p:last-child   { margin-bottom: 0; }
+.dialog-body ul             { padding-left: 1.25rem; margin-bottom: 0; color: var(--text-main); }
+.dialog-body li             { margin-bottom: 0.6rem; }
+.dialog-body li:last-child  { margin-bottom: 0; }
+.dialog-body .dialog-section-divider {
+  border-top: 1px solid var(--border-light);
+  padding-top: 1.25rem;
+  margin-top: 0.25rem;
+}
+.dialog-body .dialog-section-divider p { margin-bottom: 0.75rem; }
+
+/* PatientSlideOut-specific classes (Phase 1 hoist).
+   Patient profile header row + tab-toggle strip + modifiable/intrinsic
+   action row. None are used outside the slideout but folding them into
+   classes drops ~8 inline blocks from PatientSlideOut. */
+.patient-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+.patient-header__avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.patient-header__name {
+  font-size: 1.75rem;
+  margin-bottom: 0.2rem;
+}
+.patient-header__badge-row {
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.patient-header__sibling-pos {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* Probability surface — extends .surface-card with flex column layout. */
+.probability-card {
+  background: var(--bg-surface-high);
+  padding: 1.25rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-light);
+  margin-bottom: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Driver tab strip (admission / readmission tabs above the SHAP chart). */
+.toggle-strip {
+  display: flex;
+  gap: 0.5rem;
+  background: var(--bg-dark);
+  padding: 0.4rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  margin-bottom: 1rem;
+}
+.toggle-strip__btn {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-family: 'Inter', sans-serif;
+  transition: var(--transition);
+}
+.toggle-strip__btn[aria-pressed="true"] {
+  background: var(--bg-surface-high);
+  color: var(--text-main);
+  font-weight: 600;
+}
+.toggle-strip__btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+}
+
+/* Action-context row inside drivers (Modifiable / Intrinsic chips). */
+.action-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.45rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+}
+
+/* Action-context divider above the chips. */
+.action-context-divider {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-light);
+}
+.action-context-label {
+  margin-bottom: 0.6rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Modifiable / Intrinsic pill — structural only; color set inline (dynamic). */
+.action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+/* ProbBar caption (below the bar). Same styling as .text-meta but
+   slightly smaller; kept as its own class because the slideout uses
+   .text-meta separately for other text. */
+.probbar-caption {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
 
 * {
   box-sizing: border-box;
@@ -83,8 +476,8 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .nav-links {
   display: flex;
   gap: 0.5rem;
-  background: var(--bg-card);
-  padding: 0.4rem;
+  background: var(--bg-surface);
+  padding: 0.5rem;
   border-radius: 999px;
   border: 1px solid var(--border-light);
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
@@ -102,6 +495,9 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   border-radius: 999px;
   transition: var(--transition);
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .nav-btn:hover { color: var(--text-main); }
@@ -127,6 +523,14 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   padding: 2rem;
   box-shadow: var(--glass-shadow);
   transition: var(--transition);
+}
+
+/* Card layout helper — 0 padding + flex column. Used on glass-cards that
+   embed a sticky filter bar + scrolling content (EDAView, Predictions). */
+.card-stack {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .glass-card:hover {
@@ -456,6 +860,28 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 @keyframes radix-content-in {
   from { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
   to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* InfoTip trigger button + content layout. */
+.info-tip-trigger {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0 0 0 0.35rem;
+  cursor: help;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+.info-tip-text { display: block; }
+.info-tip-detail {
+  display: block;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 0.75rem;
 }
 
 /* Tooltip — replaces the hand-rolled InfoTip popover. Portals to body so

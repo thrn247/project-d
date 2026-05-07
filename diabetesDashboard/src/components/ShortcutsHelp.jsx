@@ -23,9 +23,9 @@ export default function ShortcutsHelp({ open, onOpenChange }) {
       <Dialog.Portal>
         <Dialog.Overlay className="radix-dialog-overlay" />
         <Dialog.Content className="radix-dialog-content shortcuts-dialog" aria-describedby={undefined}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+          <div className="dialog-header">
             <Dialog.Title asChild>
-              <h2 style={{ margin: 0, fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <h2 className="dialog-h2 dialog-h2--with-icon">
                 <Keyboard size={22} color="var(--primary)" /> Keyboard shortcuts
               </h2>
             </Dialog.Title>

@@ -17,21 +17,7 @@ export default function InfoTip({ text, detail, size = 14, placement = 'bottom' 
   return (
     <Tooltip.Root delayDuration={150}>
       <Tooltip.Trigger asChild>
-        <button
-          type="button"
-          aria-label="More information"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            padding: 0,
-            margin: '0 0 0 0.35rem',
-            cursor: 'help',
-            color: 'var(--text-muted)',
-            display: 'inline-flex',
-            alignItems: 'center',
-            lineHeight: 1,
-          }}
-        >
+        <button type="button" aria-label="More information" className="info-tip-trigger">
           <Info size={size} />
         </button>
       </Tooltip.Trigger>
@@ -42,21 +28,8 @@ export default function InfoTip({ text, detail, size = 14, placement = 'bottom' 
           collisionPadding={12}
           className="radix-tooltip-content"
         >
-          <span style={{ display: 'block' }}>{text}</span>
-          {detail && (
-            <span
-              style={{
-                display: 'block',
-                marginTop: '0.5rem',
-                paddingTop: '0.5rem',
-                borderTop: '1px solid var(--border-light)',
-                color: 'var(--text-muted)',
-                fontSize: '0.75rem',
-              }}
-            >
-              {detail}
-            </span>
-          )}
+          <span className="info-tip-text">{text}</span>
+          {detail && <span className="info-tip-detail">{detail}</span>}
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>

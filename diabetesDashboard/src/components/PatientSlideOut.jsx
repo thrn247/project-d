@@ -18,7 +18,7 @@ const SeverityIcon = ({ severity, size = 14 }) => {
 const ProbBar = ({ label, value, color, threshold, context, suppressed = false, suppressedText = '' }) => (
   <div style={{ opacity: suppressed ? 0.6 : 1 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'baseline' }}>
-      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>{label}</span>
+      <span className="text-eyebrow">{label}</span>
       <span style={{ fontSize: '1.05rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: suppressed ? 'var(--text-muted)' : color }}>
         {suppressed ? '—' : `${value.toFixed(1)}%`}
       </span>
@@ -49,10 +49,10 @@ const ProbBar = ({ label, value, color, threshold, context, suppressed = false, 
       )}
     </div>
     {context && !suppressed && (
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>{context}</div>
+      <div className="probbar-caption">{context}</div>
     )}
     {suppressed && suppressedText && (
-      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>{suppressedText}</div>
+      <div className="probbar-caption">{suppressedText}</div>
     )}
   </div>
 );
@@ -103,13 +103,13 @@ function BaselineCard({ heading, patientPct, baselinePct }) {
         <div>
           <div className="baseline-card__label">This patient</div>
           <div className="baseline-card__value">
-            {patientPct.toFixed(1)}<span style={{ fontSize: '0.55em', marginLeft: '0.1em' }}>%</span>
+            {patientPct.toFixed(1)}<span className="kpi-pct-suffix">%</span>
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div className="baseline-card__label">Cohort baseline</div>
           <div className="baseline-card__value baseline-card__value--muted">
-            {baselinePct.toFixed(1)}<span style={{ fontSize: '0.55em', marginLeft: '0.1em' }}>%</span>
+            {baselinePct.toFixed(1)}<span className="kpi-pct-suffix">%</span>
           </div>
         </div>
       </div>
@@ -261,32 +261,35 @@ export default function PatientSlideOut({
 
           {patient && (
             <div className="slideout-body">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '2rem' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 25px ${severityColor}44`, border: `2px solid ${severityColor}aa` }}>
+              <div className="patient-header">
+                <div
+                  className="patient-header__avatar"
+                  style={{ boxShadow: `0 0 25px ${severityColor}44`, border: `2px solid ${severityColor}aa` }}
+                >
                   <User size={30} color={severityColor} />
                 </div>
                 <div>
-                  <h1 id="slideout-patient-heading" style={{ fontSize: '1.75rem', marginBottom: '0.2rem' }}>{patient.Patient_ID}</h1>
-                  <p style={{ margin: '0', color: 'var(--text-muted)' }}>{patient.Age} yrs • {patient.Sex}</p>
-                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <span className={`badge ${patient.Severity.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <h1 id="slideout-patient-heading" className="patient-header__name">{patient.Patient_ID}</h1>
+                  <p style={{ margin: 0 }}>{patient.Age} yrs • {patient.Sex}</p>
+                  <div className="patient-header__badge-row">
+                    <span className={`badge ${patient.Severity.toLowerCase()} icon-row-xs`}>
                       <SeverityIcon severity={patient.Severity} size={12} />
                       {patient.Severity} Risk Profile
                     </span>
                     <InfoTip text={tips.severity_logic.text} size={12} />
                   </div>
                   {canNavigate && (
-                    <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    <div className="patient-header__sibling-pos">
                       {(siblings.indexOf(patient.Patient_ID) + 1).toLocaleString()} of {siblings.length.toLocaleString()} in current view
                     </div>
                   )}
                 </div>
               </div>
 
-              <h3 style={{ paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontFamily: 'Manrope, sans-serif' }}>
+              <h3 className="section-h3">
                 <Activity size={18} color="var(--primary)" /> Predicted Probabilities
               </h3>
-              <div style={{ background: 'var(--bg-surface-high)', padding: '1.25rem', borderRadius: '1rem', border: '1px solid var(--border-light)', marginBottom: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="probability-card">
                 <ProbBar
                   label="Admission probability"
                   value={admissionRisk * 100}
@@ -308,7 +311,7 @@ export default function PatientSlideOut({
               {/* Cohort Baseline section — promoted out of the drivers section
                   in step 5 so both admission + readmission baselines are
                   visible at a glance, not gated by the active driver tab. */}
-              <h3 style={{ paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontFamily: 'Manrope, sans-serif' }}>
+              <h3 className="section-h3">
                 <AlertTriangle size={18} color="var(--warning)" /> Cohort Baseline
               </h3>
               <div className={`cohort-baseline-grid ${readmissionUnavailable ? 'single' : ''}`} style={{ marginBottom: '2rem' }}>
@@ -327,7 +330,7 @@ export default function PatientSlideOut({
               </div>
 
               {/* Primary Predictive Drivers — admission/readmission tabs */}
-              <h3 style={{ paddingBottom: '0.5rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', fontFamily: 'Manrope, sans-serif' }}>
+              <h3 className="section-h3">
                 <AlertCircle size={18} color="var(--danger)" /> Primary Predictive Drivers
                 <InfoTip
                   text={activeDriverTab === 'admission' ? tips.patient_admission_drivers.text : tips.patient_readmission_drivers.text}
@@ -335,30 +338,32 @@ export default function PatientSlideOut({
                 />
               </h3>
 
-              <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-dark)', padding: '0.4rem', borderRadius: '12px', border: '1px solid var(--border-light)', marginBottom: '1rem' }}>
+              <div className="toggle-strip">
                 <button
                   type="button"
                   onClick={() => setActiveDriverTab('admission')}
-                  style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeDriverTab === 'admission' ? 'var(--bg-surface-high)' : 'transparent', color: activeDriverTab === 'admission' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeDriverTab === 'admission' ? 600 : 500, transition: 'var(--transition)' }}
+                  className="toggle-strip__btn"
+                  aria-pressed={activeDriverTab === 'admission'}
                 >
                   Admission
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveDriverTab('readmission')}
-                  style={{ flex: 1, padding: '0.5rem', borderRadius: '8px', cursor: 'pointer', border: 'none', background: activeDriverTab === 'readmission' ? 'var(--bg-surface-high)' : 'transparent', color: activeDriverTab === 'readmission' ? 'var(--text-main)' : 'var(--text-muted)', fontWeight: activeDriverTab === 'readmission' ? 600 : 500, transition: 'var(--transition)' }}
+                  className="toggle-strip__btn"
+                  aria-pressed={activeDriverTab === 'readmission'}
                 >
                   Readmission
                 </button>
               </div>
 
-              <div style={{ background: 'var(--bg-surface-high)', padding: '1.5rem', borderRadius: '1rem', border: '1px solid var(--border-light)' }}>
+              <div className="surface-card--inner">
                 {activeDriverTab === 'readmission' && readmissionUnavailable ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  <div className="empty-message">
                     Readmission not predicted for this patient — Stage 1 admission score is below the model threshold.
                   </div>
                 ) : activeDriverTab === 'readmission' && readmissionDriversNotYetGenerated ? (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  <div className="empty-message">
                     Per-patient readmission drivers not available in this payload — re-run <code>build_export.py</code> to generate them.
                   </div>
                 ) : activeDrivers.length > 0 ? (
@@ -393,37 +398,24 @@ export default function PatientSlideOut({
                     </div>
 
                     {/* Action context — modifiable vs intrinsic per driver */}
-                    <div style={{ marginTop: '1.25rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>
+                    <div className="action-context-divider">
+                      <div className="text-eyebrow--sm action-context-label">
                         Action context
                         <InfoTip text={tips.modifiable_drivers.text} size={11} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                      <div className="col-gap-sm">
                         {activeDrivers.map(d => {
                           const modifiable = isModifiable(d.name);
                           return (
-                            <div
-                              key={d.name}
-                              style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                fontSize: '0.82rem',
-                                padding: '0.45rem 0.65rem',
-                                borderRadius: '0.45rem',
-                                background: 'var(--bg-card)',
-                                border: '1px solid var(--border-light)',
-                              }}
-                            >
-                              <span style={{ color: 'var(--text-main)' }}>{d.label}</span>
-                              <span style={{
-                                display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-                                fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                                padding: '0.2rem 0.55rem', borderRadius: '999px',
-                                background: modifiable ? 'var(--success-container)' : 'var(--bg-surface-high)',
-                                color: modifiable ? 'var(--success)' : 'var(--text-muted)',
-                              }}>
+                            <div key={d.name} className="action-row">
+                              <span>{d.label}</span>
+                              <span
+                                className="action-pill"
+                                style={{
+                                  background: modifiable ? 'var(--success-container)' : 'var(--bg-surface-high)',
+                                  color: modifiable ? 'var(--success)' : 'var(--text-muted)',
+                                }}
+                              >
                                 {modifiable ? <Wrench size={10} /> : <Lock size={10} />}
                                 {modifiable ? 'Modifiable' : 'Intrinsic'}
                               </span>
@@ -434,7 +426,7 @@ export default function PatientSlideOut({
                     </div>
                   </>
                 ) : (
-                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  <div className="empty-message">
                     {activeDriverTab === 'admission' && patient.Predicted_Admission === 1
                       ? 'Detailed SHAP drivers not strongly skewed for this patient.'
                       : 'No strong drivers identified for this patient.'}

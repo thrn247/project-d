@@ -179,7 +179,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
   };
 
   return (
-    <div className="glass-card table-view-container" style={{ padding: '0', display: 'flex', flexDirection: 'column' }}>
+    <div className="glass-card table-view-container card-stack">
 
       <div className="card-title-row">
         <div>
@@ -201,7 +201,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
         onJumpToPredictions={onJumpToPredictions}
       />
 
-      <div style={{ padding: '3rem' }}>
+      <div className="eda-card-body">
 
         {filteredData.length === 0 ? (
           <div style={{ marginBottom: '3rem' }}>
@@ -214,34 +214,34 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           </div>
         ) : (<>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2rem', marginBottom: '3rem' }}>
+        <div className="kpi-grid" style={{ marginBottom: '3rem' }}>
 
           <div className="stat-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <div className="row-between-top">
+              <span className="label kpi-tip-label">
                 Active Filter Cohort
                 <InfoTip text={tips.active_filter_cohort.text} size={13} />
               </span>
               <Users size={20} color="var(--primary)" />
             </div>
-            <div className="value" style={{ fontSize: '3rem' }}>{Math.round(tweenedCohortCount).toLocaleString()}</div>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+            <div className="value kpi-value">{Math.round(tweenedCohortCount).toLocaleString()}</div>
+            <p className="text-stat-caption">
               {filtersActive ? activeFilterSummary : 'All patients in cohort'}
             </p>
           </div>
 
           <div className="stat-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <div className="row-between-top">
+              <span className="label kpi-tip-label">
                 Avg. Admission Risk
                 <InfoTip text={tips.avg_admission_risk.text} detail={tips.avg_admission_risk.detail} size={13} />
               </span>
               <TrendingUp size={20} color="var(--primary)" />
             </div>
-            <div className="value" style={{ fontSize: '3rem' }}>
-              {tweenedAvgRisk.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+            <div className="value kpi-value">
+              {tweenedAvgRisk.toFixed(1)}<span className="kpi-pct-suffix">%</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+            <p className="text-stat-caption">
               {filtersActive
                 ? `${metrics.avgRisk >= globalAvgRisk ? '↑' : '↓'} ${Math.abs(metrics.avgRisk - globalAvgRisk).toFixed(1)} pts vs all ${data.length.toLocaleString()} patients`
                 : `Across all ${data.length.toLocaleString()} patients`}
@@ -249,35 +249,35 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           </div>
 
           <div className="stat-box">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <span className="label" style={{ display: 'inline-flex', alignItems: 'center' }}>
+            <div className="row-between-top">
+              <span className="label kpi-tip-label">
                 Readmission Conversion Rate
                 <InfoTip text={tips.readmit_conversion.text} detail={tips.readmit_conversion.detail} size={13} />
               </span>
               <AlertTriangle size={20} color="var(--warning)" />
             </div>
-            <div className="value" style={{ fontSize: '3rem', color: 'var(--warning)' }}>
-              {tweenedReadmitRate.toFixed(1)}<span style={{ fontSize: '0.5em', marginLeft: '0.1em' }}>%</span>
+            <div className="value kpi-value--warning">
+              {tweenedReadmitRate.toFixed(1)}<span className="kpi-pct-suffix">%</span>
             </div>
-            <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--text-muted)' }}>
+            <p className="text-stat-caption">
               Percent of the {metrics.totalAdmitted.toLocaleString()} admitted expected to readmit
             </p>
           </div>
         </div>
 
-        <h2 style={{ paddingTop: '1rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '1.5rem', marginBottom: '2.5rem' }}>
+        <h2 className="section-divider-h2">
           <TrendingUp color="var(--primary)" size={24} /> Cohort Distribution
         </h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '2.5rem', marginBottom: '4rem' }}>
+        <div className="charts-grid" style={{ marginBottom: '4rem' }}>
 
           {/* Age band bar chart — clickable for cross-filter */}
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="chart-card">
+            <h3 className="chart-card-title">
               <Activity size={16} color="var(--primary)" /> Admission Risk by Age Band
               <InfoTip text={tips.age_band_chart.text} size={13} />
             </h3>
-            <div style={{ width: '100%', height: '280px' }}>
+            <div className="chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={ageRiskData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
@@ -325,12 +325,12 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           </div>
 
           {/* Cohort drivers */}
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="chart-card">
+            <h3 className="chart-card-title">
               <ShieldAlert size={16} color="var(--danger)" /> Most-Cited Risk Drivers (Cohort)
               <InfoTip text={tips.cohort_drivers.text} detail={tips.cohort_drivers.detail} size={13} />
             </h3>
-            <div style={{ width: '100%', height: '280px' }}>
+            <div className="chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={aggregatedDrivers} layout="vertical" margin={{ top: 0, right: 10, left: 10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--border-light)" />
@@ -361,12 +361,12 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           </div>
 
           {/* Admission-risk distribution histogram — clickable for cross-filter */}
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="chart-card">
+            <h3 className="chart-card-title">
               <BarChart2 size={16} color="var(--primary)" /> Admission Risk Distribution
               <InfoTip text={tips.risk_distribution.text} detail={tips.risk_distribution.detail} size={13} />
             </h3>
-            <div style={{ width: '100%', height: '280px' }}>
+            <div className="chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={riskHistogramData} margin={{ top: 24, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
@@ -424,18 +424,18 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           </div>
 
           {/* Severity × Sex matrix — clickable for cross-filter */}
-          <div style={{ background: 'var(--bg-card)', padding: '2rem', borderRadius: '1.25rem', border: '1px solid var(--border-light)', boxShadow: 'var(--glass-shadow)' }}>
-            <h3 style={{ marginBottom: '1.5rem', fontSize: '1rem', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div className="chart-card">
+            <h3 className="chart-card-title">
               <Users size={16} color="var(--primary)" /> Severity × Sex Matrix
               <InfoTip text={tips.severity_sex_matrix.text} size={13} />
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr', gridTemplateRows: '36px repeat(3, 1fr)', gap: '6px', height: '244px' }}>
+            <div className="severity-matrix">
               <div />
-              <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Male</div>
-              <div style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, alignSelf: 'center' }}>Female</div>
+              <div className="matrix-axis-label">Male</div>
+              <div className="matrix-axis-label">Female</div>
               {['Severe', 'Moderate', 'Mild'].map(sev => (
                 <Fragment key={sev}>
-                  <div style={{ alignSelf: 'center', fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 600 }}>{sev}</div>
+                  <div className="matrix-row-label">{sev}</div>
                   {['M', 'F'].map(sex => {
                     const cell = severitySexMatrix.cells[`${sev}-${sex}`];
                     const isActive = filters.severity === sev && filters.gender === sex;
@@ -462,7 +462,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                           boxShadow: isActive ? '0 0 0 4px var(--primary-glow)' : 'none',
                         }}
                       >
-                        <div style={{ fontSize: '1.4rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: 'var(--text-main)' }}>
+                        <div className="matrix-cell-value">
                           {cell.count.toLocaleString()}
                         </div>
                         <div style={{ fontSize: '0.78rem', color: matrixCellAccent(cell.avgRisk), fontWeight: 600 }}>
@@ -475,7 +475,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               ))}
             </div>
             {severitySexMatrix.unknownSex > 0 && (
-              <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              <div className="text-meta--small" style={{ marginTop: '0.75rem' }}>
                 {severitySexMatrix.unknownSex.toLocaleString()} patients with unknown sex not shown.
               </div>
             )}
