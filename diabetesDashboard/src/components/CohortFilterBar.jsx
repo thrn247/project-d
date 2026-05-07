@@ -5,10 +5,9 @@ import { Filter, ChevronDown, X, ArrowRight, ArrowLeft, Search } from 'lucide-re
 import { applyFilters, isFilterActive } from '../filters';
 import { labelFor } from '../featureLabels';
 
-// PascalCase aliases — eslint's no-unused-vars doesn't trace JSX member
-// expressions on lowercase identifiers (`<motion.div>`), so we surface the
-// component bindings explicitly here.
-const MotionDiv = motion.div;
+// PascalCase alias — eslint's no-unused-vars doesn't trace JSX member
+// expressions on lowercase identifiers (`<motion.button>`), so we surface
+// the component binding explicitly here.
 const MotionButton = motion.button;
 
 // Single source of truth for the cohort filter UI. Replaces three previously
@@ -65,9 +64,7 @@ function FilterDropdown({ label, value, defaultValue, options, onChange }) {
     : label;
 
   return (
-    <MotionDiv
-      layout
-      transition={{ duration: 0.2, ease: [0.25, 0.8, 0.25, 1] }}
+    <div
       className={`cfb-dropdown-group ${isActive ? 'cfb-dropdown-group--active' : ''}`}
     >
       <DropdownMenu.Root>
@@ -122,7 +119,7 @@ function FilterDropdown({ label, value, defaultValue, options, onChange }) {
           </MotionButton>
         )}
       </AnimatePresence>
-    </MotionDiv>
+    </div>
   );
 }
 
