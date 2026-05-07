@@ -124,7 +124,7 @@ export default function App() {
           <div className="loading-screen">
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
               <Activity color="var(--primary)" size={48} className="fast-spin" />
-              <h2>Loading Full Cohort Predictions (62k+ patients)...</h2>
+              <h2>Loading Full Cohort Predictions (61k patients)...</h2>
               <p style={{ color: 'var(--text-muted)' }}>Parsing machine learning inferences & SHAP values</p>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function App() {
             <div style={{ fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--text-main)' }}>
               <p style={{ marginBottom: '1rem' }}>
                 <strong>Two-stage XGBoost.</strong> Predicts (1) hospital admission and (2) all-cause inpatient
-                recurrence given admission. Both stages are gradient-boosted decision trees trained on a 62,135-patient
+                recurrence given admission. Both stages are gradient-boosted decision trees trained on a 61,406-patient
                 Type-2 diabetes cohort drawn from a Malaysian third-party-administrator claims dataset.
               </p>
               <p style={{ marginBottom: '1rem' }}>

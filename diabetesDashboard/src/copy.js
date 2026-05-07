@@ -10,7 +10,7 @@ export const getTips = (thresholds) => {
   const readm = (thresholds.readmission * 100).toFixed(1);
   return {
     cohort_overview: {
-      text: 'Filtered subset of the full 62,135-patient cohort. Updates when you change the gender or severity filters or click a chart segment.',
+      text: 'Filtered subset of the full 61,406-patient cohort. Updates when you change the gender or severity filters or click a chart segment.',
     },
     active_filter_cohort: {
       text: 'Number of patients matching the active filters.',
