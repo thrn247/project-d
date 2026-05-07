@@ -1080,24 +1080,29 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .radix-tooltip-content[data-state="instant-open"] { animation: radix-fade-in 0.1s ease-out; }
 .radix-tooltip-content[data-state="closed"]       { animation: radix-fade-out 0.1s ease-in; }
 
-/* Dialog — used by the About modal in step 1, the slideout in step 5,
-   and the shortcuts-help dialog in step 3. */
+/* Dialog — used by the About modal, the slideout (vaul), and the
+   shortcuts-help dialog. We use a CSS transition on `opacity` driven by
+   the data-state attribute (Radix Dialog and vaul both set
+   data-state="open|closed" on the overlay element). This is more robust
+   than keyframe animations + animation-fill-mode here because keyframes
+   with `forwards` were still racing with vaul's own animation
+   bookkeeping, leaving a brief opacity-snap glitch after slideout close.
+   Pure transition: the browser interpolates opacity in both directions
+   automatically, so no fill-mode required. */
 .radix-dialog-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(6px);
   z-index: 200;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  pointer-events: none;
 }
-/* `forwards` fill-mode is the load-bearing bit here. Without it, the
-   reverse close-animation runs opacity 1→0 over 400ms then snaps back to
-   the default opacity:1 at animation-end (since `animation-fill-mode`
-   defaults to `none`). That snap, in the brief window before the element
-   unmounts, is the "dim flash recurring after slideout closed" the user
-   reported. `forwards` pins the element at the keyframe's end-state until
-   unmount. */
-.radix-dialog-overlay[data-state="open"]   { animation: radix-overlay-in 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-.radix-dialog-overlay[data-state="closed"] { animation: radix-overlay-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) reverse forwards; }
+.radix-dialog-overlay[data-state="open"] {
+  opacity: 1;
+  pointer-events: auto;
+}
 
 .radix-dialog-content {
   position: fixed;
