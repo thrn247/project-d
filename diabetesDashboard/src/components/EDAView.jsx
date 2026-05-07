@@ -4,6 +4,8 @@ import { Activity, Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart2, Sea
 import InfoTip from './InfoTip';
 import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
+import EmptyStateIllustration from './EmptyStateIllustration';
+import RiskTooltip from './RiskTooltip';
 import { labelFor } from '../featureLabels';
 import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
@@ -205,7 +207,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
         {filteredData.length === 0 ? (
           <div style={{ marginBottom: '3rem' }}>
             <EmptyState
-              icon={Search}
+              icon={EmptyStateIllustration}
               title="No patients match these filters"
               description="Try removing the most restrictive filter, or clear them all to start exploring again."
               action={{ label: 'Clear all filters', onClick: clearAllFilters }}
@@ -288,18 +290,21 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => v + '%'} />
                   <Tooltip
                     cursor={{ fill: 'rgba(120,120,120,0.05)' }}
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-main)' }}
-                    content={({ active, payload }) => active && payload?.[0]?.payload ? (
-                      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '0.65rem 0.85rem', fontSize: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>Age {payload[0].payload.name}</div>
-                        <div style={{ color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          {payload[0].payload.count.toLocaleString()} patients · avg risk {payload[0].payload.avgRisk.toFixed(1)}%
-                        </div>
-                        <div style={{ color: 'var(--primary)', marginTop: '0.4rem', fontSize: '0.78rem' }}>
-                          Click to {filters.ageBand === payload[0].payload.name ? 'clear filter' : 'filter cohort'}
-                        </div>
-                      </div>
-                    ) : null}
+                    content={(props) => {
+                      const p = props.payload?.[0]?.payload;
+                      if (!p) return null;
+                      return (
+                        <RiskTooltip
+                          {...props}
+                          title={`Age ${p.name}`}
+                          items={[{
+                            text: `${p.count.toLocaleString()} patients · avg risk ${p.avgRisk.toFixed(1)}%`,
+                            tone: 'meta',
+                          }]}
+                          footer={`Click to ${filters.ageBand === p.name ? 'clear filter' : 'filter cohort'}`}
+                        />
+                      );
+                    }}
                   />
                   <Bar
                     dataKey="avgRisk"
@@ -341,10 +346,21 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                   <YAxis dataKey="label" type="category" width={200} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
                   <Tooltip
                     cursor={{ fill: 'rgba(120,120,120,0.05)' }}
-                    contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', color: 'var(--text-main)' }}
-                    formatter={(value) => {
+                    content={(props) => {
+                      const entry = props.payload?.[0];
+                      if (!entry) return null;
+                      const value = entry.value;
                       const pct = filteredData.length > 0 ? (value / filteredData.length) * 100 : 0;
-                      return [`${value.toLocaleString()} patients (${pct.toFixed(1)}% of cohort)`, 'Leading Influence'];
+                      return (
+                        <RiskTooltip
+                          {...props}
+                          title={entry.payload?.label}
+                          items={[
+                            { text: 'Leading influence', tone: 'meta' },
+                            { text: `${value.toLocaleString()} patients (${pct.toFixed(1)}% of cohort)`, tone: 'value' },
+                          ]}
+                        />
+                      );
                     }}
                   />
                   <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={14} animationDuration={400}>
@@ -387,17 +403,21 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip
                     cursor={{ fill: 'rgba(120,120,120,0.05)' }}
-                    content={({ active, payload }) => active && payload?.[0]?.payload ? (
-                      <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-light)', borderRadius: '12px', padding: '0.65rem 0.85rem', fontSize: '0.85rem' }}>
-                        <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{payload[0].payload.name}</div>
-                        <div style={{ color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                          {payload[0].payload.count.toLocaleString()} patients · {payload[0].payload.pct.toFixed(1)}% of cohort
-                        </div>
-                        <div style={{ color: 'var(--primary)', marginTop: '0.4rem', fontSize: '0.78rem' }}>
-                          Click to {filters.riskBand === payload[0].payload.name ? 'clear filter' : 'filter cohort'}
-                        </div>
-                      </div>
-                    ) : null}
+                    content={(props) => {
+                      const p = props.payload?.[0]?.payload;
+                      if (!p) return null;
+                      return (
+                        <RiskTooltip
+                          {...props}
+                          title={p.name}
+                          items={[{
+                            text: `${p.count.toLocaleString()} patients · ${p.pct.toFixed(1)}% of cohort`,
+                            tone: 'meta',
+                          }]}
+                          footer={`Click to ${filters.riskBand === p.name ? 'clear filter' : 'filter cohort'}`}
+                        />
+                      );
+                    }}
                   />
                   <Bar
                     dataKey="count"
@@ -419,7 +439,14 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     stroke="var(--danger)"
                     strokeWidth={2}
                     strokeDasharray="4 2"
-                    label={{ value: 'Threshold', position: 'top', fill: 'var(--danger)', fontSize: 11, fontWeight: 600 }}
+                    label={({ viewBox }) => {
+                      const pct = (thresholds.admission * 100).toFixed(1);
+                      return (
+                        <foreignObject x={viewBox.x - 75} y={viewBox.y - 26} width={150} height={22}>
+                          <div className="threshold-chip">Flag threshold {pct}%</div>
+                        </foreignObject>
+                      );
+                    }}
                   />
                 </BarChart>
               </ResponsiveContainer>
@@ -448,7 +475,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                         type="button"
                         onClick={() => onMatrixCellClick(sev, sex)}
                         aria-pressed={isActive}
-                        aria-label={`Filter to ${sev} severity, ${sex === 'M' ? 'Male' : 'Female'} (${cell.count.toLocaleString()} patients, ${cell.avgRisk.toFixed(1)}% avg risk)`}
+                        aria-label={`${sev} ${sex === 'M' ? 'Male' : 'Female'}, ${cell.count.toLocaleString()} patients, ${cell.avgRisk.toFixed(1)}% average risk, click to ${isActive ? 'clear filter' : 'filter cohort'}`}
                         style={{
                           background: matrixCellBg(cell.avgRisk),
                           borderRadius: '0.5rem',

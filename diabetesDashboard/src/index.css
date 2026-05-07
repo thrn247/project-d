@@ -470,6 +470,91 @@
   pointer-events: none;
 }
 
+/* RiskTooltip (Phase 4c) — shared Recharts tooltip surface. Matches the
+   .glass-card aesthetic: same border, radius, shadow. */
+.risk-tooltip {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+  box-shadow: var(--glass-shadow);
+  color: var(--text-main);
+  pointer-events: none;
+}
+.risk-tooltip__title {
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 0.2rem;
+}
+.risk-tooltip__line { margin-top: 0.15rem; }
+.risk-tooltip__line--meta  { color: var(--text-muted); }
+.risk-tooltip__line--value { color: var(--text-main); font-weight: 600; }
+.risk-tooltip__footer {
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--primary);
+}
+
+/* Threshold reference-line chip (Phase 4d) — sits on the risk histogram
+   anchored above the dashed danger-coloured ReferenceLine. Same pill
+   silhouette as the active filter chips for visual continuity. */
+.threshold-chip {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  background: var(--danger-container);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.1;
+}
+
+/* Skeleton loaders (Phase 4g) — replace the spinning Activity icon with
+   a layout-preserving skeleton so the page doesn't reflow when data
+   arrives. Shimmer is paused by prefers-reduced-motion. */
+@keyframes skeleton-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 0%,
+    var(--bg-surface-high) 50%,
+    var(--bg-surface) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: 1.25rem;
+}
+.skeleton--kpi   { height: 160px; }
+.skeleton--chart { height: 320px; margin-top: 2rem; border-radius: 1.5rem; }
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; background: var(--bg-surface); }
+}
+
+.loading-shell {
+  padding: 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.loading-copy {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+.loading-copy h2 {
+  font-size: 1.4rem;
+  color: var(--text-main);
+  margin-bottom: 0.5rem;
+}
+.loading-copy p { color: var(--text-muted); }
+
 * {
   box-sizing: border-box;
   margin: 0;

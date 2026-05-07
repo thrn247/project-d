@@ -27,6 +27,7 @@ function useIsDesktop() {
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell } from 'recharts';
 import { labelFor, isModifiable } from '../featureLabels';
 import InfoTip from './InfoTip';
+import RiskTooltip from './RiskTooltip';
 import { getTips } from '../copy';
 
 const SEVERITY_ICON_MAP = { Severe: Flame, Moderate: AlertTriangle, Mild: CircleDot };
@@ -401,7 +402,20 @@ export default function PatientSlideOut({
                           <YAxis dataKey="label" type="category" width={220} tick={{ fill: 'var(--text-main)', fontSize: '0.75rem' }} axisLine={false} tickLine={false} />
                           <Tooltip
                             cursor={{ fill: 'var(--border-light)' }}
-                            formatter={(value) => [`+${value.toFixed(1)}% Impact`, 'Contribution to risk']}
+                            content={(props) => {
+                              const entry = props.payload?.[0];
+                              if (!entry) return null;
+                              return (
+                                <RiskTooltip
+                                  {...props}
+                                  title={entry.payload?.label}
+                                  items={[
+                                    { text: 'Contribution to risk', tone: 'meta' },
+                                    { text: `+${entry.value.toFixed(1)}% impact`, tone: 'value' },
+                                  ]}
+                                />
+                              );
+                            }}
                           />
                           <Bar dataKey="impact" radius={[0, 4, 4, 0]} barSize={20} animationDuration={400}>
                             {activeDrivers.map((entry, index) => (
