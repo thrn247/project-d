@@ -2,10 +2,9 @@ import React, { useState, useMemo, useDeferredValue, useRef, useEffect, useCallb
 import { useReactTable, getCoreRowModel, getSortedRowModel, flexRender } from '@tanstack/react-table';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
-  ChevronDown, ChevronUp, AlertCircle, AlertTriangle, Activity, Search,
-  List, LayoutGrid, Flame, CircleDot,
+  ChevronDown, AlertCircle, AlertTriangle, Activity,
+  List, LayoutGrid, Flame, CircleDot, Download,
 } from 'lucide-react';
-import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import EmptyStateIllustration from './EmptyStateIllustration';
 import { applyFilters, isFilterActive } from '../filters';
@@ -51,19 +50,18 @@ const COL_ALIGN = {
 const ROW_HEIGHT = 72;
 const TILE_LIMIT = 20; // mirrors the original tile view's cap before Step 4
 
-export default function PredictionsDirectory({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToEDA, openSlideOut }) {
-  const [searchQuery, setSearchQuery] = useState('');
+export default function PredictionsDirectory({
+  data, thresholds, filters, clearAllFilters, openSlideOut,
+  searchQuery, setSearchQuery,
+}) {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [sorting, setSorting] = useState([{ id: 'Stage_1_Admission_Risk', desc: true }]);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'tiles'
   const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
-  // Phase 4a: the entire glass-card is now the single scroll container so
-  // CohortFilterBar's sticky behaviour engages while the table scrolls
-  // beneath it. The virtualizer reads this ref instead of the (now-deleted)
-  // inner .virtual-table-scroller.
-  const cardScrollRef = useRef(null);
-
-  const handleSearchInput = useCallback((value) => setSearchQuery(value), []);
+  // Refresh follow-up: CohortFilterBar moved to App as a global toolbar, so
+  // the inner .virtual-table-scroller is back as the dedicated scroll
+  // container for the virtualized rows.
+  const tableContainerRef = useRef(null);
 
   // Cross-filter (App-level) → patient-ID search (deferred for typing responsiveness).
   // TanStack handles sorting downstream.
@@ -189,7 +187,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => cardScrollRef.current,
+    getScrollElement: () => tableContainerRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
@@ -239,21 +237,21 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   // Re-focus the tracked row after virtualizer remounts.
   useEffect(() => {
     if (focusedRowIndex < 0 || viewMode !== 'table') return;
-    const el = cardScrollRef.current?.querySelector(`[data-row-index="${focusedRowIndex}"]`);
+    const el = tableContainerRef.current?.querySelector(`[data-row-index="${focusedRowIndex}"]`);
     if (el && document.activeElement !== el) {
       el.focus({ preventScroll: true });
     }
   }, [focusedRowIndex, virtualRows.length, viewMode]);
 
+  // Single rotating chevron — desc points down (default), asc rotates 180°
+  // for a smooth flip via CSS transition. Idle (no sort) is dimmed.
   const sortIcon = (header) => {
     if (!header.column.getCanSort()) return null;
-    const dir = header.column.getIsSorted();
-    if (dir === 'desc') return <ChevronDown size={14} />;
-    if (dir === 'asc')  return <ChevronUp size={14} />;
+    const dir = header.column.getIsSorted(); // 'asc' | 'desc' | false
+    const cls = dir ? `pd-sort-icon pd-sort-icon--${dir}` : 'pd-sort-icon pd-sort-icon--idle';
     return (
-      <span style={{ display: 'inline-flex', flexDirection: 'column', opacity: 0.4, lineHeight: 0.7 }} aria-hidden="true">
-        <ChevronUp size={10} />
-        <ChevronDown size={10} />
+      <span className={cls} aria-hidden="true">
+        <ChevronDown size={14} />
       </span>
     );
   };
@@ -338,9 +336,9 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   );
 
   // ─── Table view ──────────────────────────────────────────────────────
-  // Phase 4a: dropped the inner .virtual-table-scroller (with its own
-  // overflow-y) — the parent .glass-card.card-stack is now the single scroll
-  // container, which lets the sticky filter bar engage during table scroll.
+  // CohortFilterBar moved to App in this refresh, so the inner
+  // .virtual-table-scroller is back as the dedicated scroll container.
+  // Sticky filter is no longer relevant inside the card.
   const renderTable = () => (
     <div className="virtual-table-shell">
       <div className="virtual-table-hint">
@@ -348,7 +346,8 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
         {sorting[0] && (sorting[0].desc ? ' (highest first)' : ' (lowest first)')}.
         Click any column header to re-sort. Arrow keys to navigate rows.
       </div>
-      <table className="virtual-data-grid" role="table">
+      <div ref={tableContainerRef} className="virtual-table-scroller">
+        <table className="virtual-data-grid" role="table">
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -423,51 +422,45 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
             })}
           </tbody>
         </table>
+      </div>
     </div>
   );
 
   return (
-    <div ref={cardScrollRef} className="glass-card table-view-container card-stack card-stack--scroll" style={{ height: '100%' }}>
+    <div className="glass-card table-view-container card-stack" style={{ height: '100%' }}>
       <div className="card-title-row">
         <div>
           <h2><Activity color="var(--primary)" size={26} /> Patient Predictions</h2>
           <p>Showing {rows.length.toLocaleString()} matching patients</p>
         </div>
-        <div className="pred-view-toggle" role="group" aria-label="View mode">
-          <button
-            type="button"
-            onClick={() => setViewMode('table')}
-            className={viewMode === 'table' ? 'active' : ''}
-            aria-pressed={viewMode === 'table'}
-            aria-label="Table view"
-            title="Table view"
-          >
-            <List size={16} /> <span>Table</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('tiles')}
-            className={viewMode === 'tiles' ? 'active' : ''}
-            aria-pressed={viewMode === 'tiles'}
-            aria-label="Tiles view"
-            title="Tiles view"
-          >
-            <LayoutGrid size={16} /> <span>Tiles</span>
+        <div className="card-title-row__actions">
+          <div className="pred-view-toggle" role="group" aria-label="View mode">
+            <button
+              type="button"
+              onClick={() => setViewMode('table')}
+              className={viewMode === 'table' ? 'active' : ''}
+              aria-pressed={viewMode === 'table'}
+              aria-label="Table view"
+              title="Table view"
+            >
+              <List size={16} /> <span>Table</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('tiles')}
+              className={viewMode === 'tiles' ? 'active' : ''}
+              aria-pressed={viewMode === 'tiles'}
+              aria-label="Tiles view"
+              title="Tiles view"
+            >
+              <LayoutGrid size={16} /> <span>Tiles</span>
+            </button>
+          </div>
+          <button type="button" onClick={handleExportCSV} className="cfb-export" disabled={rows.length === 0}>
+            <Download size={14} /> Export CSV
           </button>
         </div>
       </div>
-
-      <CohortFilterBar
-        data={data}
-        filters={filters}
-        updateFilters={updateFilters}
-        clearAllFilters={clearAllFilters}
-        variant="predictions"
-        onJumpToEDA={onJumpToEDA}
-        searchQuery={searchQuery}
-        onSearchChange={handleSearchInput}
-        onExportCSV={handleExportCSV}
-      />
 
       {rows.length === 0 ? (
         <div style={{ padding: '2rem' }}>

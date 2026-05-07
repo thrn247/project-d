@@ -2,7 +2,6 @@ import React, { useMemo, Fragment } from 'react';
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell, ReferenceLine, LabelList } from 'recharts';
 import { Activity, Users, AlertTriangle, TrendingUp, ShieldAlert, BarChart2, Search } from 'lucide-react';
 import InfoTip from './InfoTip';
-import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
 import EmptyStateIllustration from './EmptyStateIllustration';
 import RiskTooltip from './RiskTooltip';
@@ -11,7 +10,7 @@ import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
 import NumberFlow from '@number-flow/react';
 
-export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToPredictions }) {
+export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters }) {
   const tips = useMemo(() => getTips(thresholds), [thresholds]);
 
   // Fully-filtered data — used by KPIs, cohort drivers, drill-down count.
@@ -191,16 +190,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
           <p>Filtered cohort summary and exploratory analysis</p>
         </div>
       </div>
-
-      <CohortFilterBar
-        data={data}
-        filters={filters}
-        updateFilters={updateFilters}
-        clearAllFilters={clearAllFilters}
-        variant="eda"
-        topDriverLabel={aggregatedDrivers[0]?.label}
-        onJumpToPredictions={onJumpToPredictions}
-      />
 
       <div className="eda-card-body">
 
