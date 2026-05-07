@@ -150,8 +150,8 @@ export default function App() {
               <Stethoscope color="white" />
             </div>
             <div>
-              <h1 style={{ fontSize: '1.35rem', margin: '0' }}>Clinical Data & Prediction Insights</h1>
-              <p style={{ margin: '0', fontSize: '0.85rem' }}>Admission & Readmission Risk Explorer</p>
+              <h1 style={{ fontSize: '1.35rem', margin: '0' }}>DART</h1>
+              <p style={{ margin: '0', fontSize: '0.85rem' }}>Diabetic Admission Readmission Tool</p>
             </div>
           </div>
 

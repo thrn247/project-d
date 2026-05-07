@@ -8,7 +8,7 @@
 
 **Owner:** Thiranbarath (student ID `00000042906`), IMU University, Bachelor in Digital Health (Hons), final-year capstone `BDH2372 Research Project II`.
 
-**One-line purpose:** Develop, interpret, and surface XGBoost-based risk scores for (A) initial hospital admission and (B) all-cause recurrent inpatient admission ("readmission") in Malaysian Type-2 diabetes patients, using a real-world PMCare Third-Party-Administrator claims extract, and expose the results through a React expert-review dashboard for formative usability evaluation.
+**One-line purpose:** Develop, interpret, and surface XGBoost-based risk scores for (A) initial hospital admission and (B) all-cause recurrent inpatient admission ("readmission") in Malaysian Type-2 diabetes patients, using a real-world PMCare Third-Party-Administrator claims extract, and expose the results through **DART** (Diabetic Admission Readmission Tool), a React expert-review dashboard for formative usability evaluation.
 
 > **Target definition note — deliberate design choice (NOT a flaw).** `Readmitted_Yes_No = (Num_Admissions > 1)` flags any patient with two or more inpatient admissions across the data window. This is **not** the standard 30-day readmission window used by UCI / LACE / MIMIC-III studies, and the choice is intentional: the 30-day positive class on this TPA dataset is too sparse for stable training (≤10% of admitted patients vs the current 27.82% under all-cause recurrence). A 30-day target would push the readmission model into a degenerate-imbalance regime that the n=7,959 admitted cohort cannot support. Internally coherent and clinically useful for "ever-readmits" risk; **every literature comparison against 30-day-target studies must explicitly state the target-definition difference** — see §8 (benchmarking) and §13 (limitations). This is the methodological cost we accept in exchange for sufficient positive-class signal.
 
@@ -250,7 +250,7 @@ python "machineLearning/source code/calibrate_models.py"
 
 ## 6. `diabetesDashboard/` — front-end and batch inference
 
-### 6.1 Stack
+### 6.1 DART stack
 - React **19.2.4**, Vite **8.0.1**, Recharts **3.8.1**, lucide-react **1.7.0**.
 - Deployment: Vercel, connected to GitHub default branch.
 - Fonts: Manrope (headings) + Inter (body) via Google Fonts.

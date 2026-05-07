@@ -1,6 +1,6 @@
-# Project D — AI-Assisted Diabetes Admission & Readmission Risk Pipeline
+# DART — Diabetic Admission Readmission Tool
 
-Final-year capstone (`BDH2372 Research Project II`, IMU University, Bachelor in Digital Health (Hons)). Trains XGBoost risk scores for (A) initial hospital admission and (B) readmission in Malaysian Type-2 diabetes patients on a PMCare Third-Party-Administrator claims extract, and surfaces them through a React expert-review dashboard.
+Final-year capstone (`BDH2372 Research Project II`, IMU University, Bachelor in Digital Health (Hons)). DART trains XGBoost risk scores for (A) initial hospital admission and (B) readmission in Malaysian Type-2 diabetes patients on a PMCare Third-Party-Administrator claims extract, and surfaces them through a React expert-review dashboard.
 
 - **Cohort:** 61,406 patients (ICD-10 `E11.*` filter) → 7,959 admitted → 2,214 readmitted
 - **Champion model (readmission):** XGBoost, ROC-AUC 0.876, PR-AUC 0.767
