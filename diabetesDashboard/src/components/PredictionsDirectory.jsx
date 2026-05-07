@@ -57,7 +57,11 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   const [sorting, setSorting] = useState([{ id: 'Stage_1_Admission_Risk', desc: true }]);
   const [viewMode, setViewMode] = useState('table'); // 'table' | 'tiles'
   const [focusedRowIndex, setFocusedRowIndex] = useState(-1);
-  const tableContainerRef = useRef(null);
+  // Phase 4a: the entire glass-card is now the single scroll container so
+  // CohortFilterBar's sticky behaviour engages while the table scrolls
+  // beneath it. The virtualizer reads this ref instead of the (now-deleted)
+  // inner .virtual-table-scroller.
+  const cardScrollRef = useRef(null);
 
   const handleSearchInput = useCallback((value) => setSearchQuery(value), []);
 
@@ -185,7 +189,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
 
   const rowVirtualizer = useVirtualizer({
     count: rows.length,
-    getScrollElement: () => tableContainerRef.current,
+    getScrollElement: () => cardScrollRef.current,
     estimateSize: () => ROW_HEIGHT,
     overscan: 8,
   });
@@ -235,7 +239,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   // Re-focus the tracked row after virtualizer remounts.
   useEffect(() => {
     if (focusedRowIndex < 0 || viewMode !== 'table') return;
-    const el = tableContainerRef.current?.querySelector(`[data-row-index="${focusedRowIndex}"]`);
+    const el = cardScrollRef.current?.querySelector(`[data-row-index="${focusedRowIndex}"]`);
     if (el && document.activeElement !== el) {
       el.focus({ preventScroll: true });
     }
@@ -334,6 +338,9 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
   );
 
   // ─── Table view ──────────────────────────────────────────────────────
+  // Phase 4a: dropped the inner .virtual-table-scroller (with its own
+  // overflow-y) — the parent .glass-card.card-stack is now the single scroll
+  // container, which lets the sticky filter bar engage during table scroll.
   const renderTable = () => (
     <div className="virtual-table-shell">
       <div className="virtual-table-hint">
@@ -341,8 +348,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
         {sorting[0] && (sorting[0].desc ? ' (highest first)' : ' (lowest first)')}.
         Click any column header to re-sort. Arrow keys to navigate rows.
       </div>
-      <div ref={tableContainerRef} className="virtual-table-scroller">
-        <table className="virtual-data-grid" role="table">
+      <table className="virtual-data-grid" role="table">
           <thead>
             {table.getHeaderGroups().map(headerGroup => (
               <tr key={headerGroup.id}>
@@ -417,12 +423,11 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
             })}
           </tbody>
         </table>
-      </div>
     </div>
   );
 
   return (
-    <div className="glass-card table-view-container" style={{ padding: '0', display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div ref={cardScrollRef} className="glass-card table-view-container card-stack card-stack--scroll" style={{ height: '100%' }}>
       <div className="card-title-row">
         <div>
           <h2><Activity color="var(--primary)" size={26} /> Patient Predictions</h2>
