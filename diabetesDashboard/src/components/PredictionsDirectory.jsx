@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CohortFilterBar from './CohortFilterBar';
 import EmptyState from './EmptyState';
+import EmptyStateIllustration from './EmptyStateIllustration';
 import { applyFilters, isFilterActive } from '../filters';
 
 // Build a filename slug encoding all active cross-filter dimensions.
@@ -35,15 +36,16 @@ const severityOrderSortFn = (rowA, rowB) => {
   return a - b;
 };
 
-// Per-column horizontal alignment. Numeric/badge columns center; identifiers
-// and free-text driver column align left.
+// Per-column horizontal alignment. Phase 4b: all columns center-aligned per
+// user feedback — left-aligned ID and Driver previously left awkward dead
+// space against the wide column boundaries on desktop viewports.
 const COL_ALIGN = {
-  Patient_ID: 'left',
+  Patient_ID: 'center',
   demographics: 'center',
   Severity: 'center',
   Stage_1_Admission_Risk: 'center',
   Stage_2_Readmission_Risk: 'center',
-  driver: 'left',
+  driver: 'center',
 };
 
 const ROW_HEIGHT = 72;
@@ -465,7 +467,7 @@ export default function PredictionsDirectory({ data, thresholds, filters, update
       {rows.length === 0 ? (
         <div style={{ padding: '2rem' }}>
           <EmptyState
-            icon={Search}
+            icon={EmptyStateIllustration}
             title="No patients match the current filters or search."
             action={(isFilterActive(filters) || searchQuery)
               ? { label: 'Clear filters & search', onClick: () => { clearAllFilters(); setSearchQuery(''); } }

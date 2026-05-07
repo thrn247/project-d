@@ -126,13 +126,20 @@ export default function App() {
       <MotionConfig reducedMotion="user">
       <Tooltip.Provider delayDuration={150}>
         <div className="app-container">
-          <div className="loading-screen">
-            <div className="loading-stack">
-              <Activity color="var(--primary)" size={48} className="fast-spin" />
-              <h2>Loading Full Cohort Predictions (61k patients)...</h2>
-              <p>Parsing machine learning inferences & SHAP values</p>
+          <main className="main-content">
+            <div className="loading-shell">
+              <div className="loading-copy">
+                <h2>Loading patient predictions (61k patients)…</h2>
+                <p>Parsing machine learning inferences &amp; SHAP values</p>
+              </div>
+              <div className="kpi-grid">
+                <div className="skeleton skeleton--kpi" />
+                <div className="skeleton skeleton--kpi" />
+                <div className="skeleton skeleton--kpi" />
+              </div>
+              <div className="skeleton skeleton--chart" />
             </div>
-          </div>
+          </main>
         </div>
         <Toaster richColors position="bottom-right" theme="light" />
       </Tooltip.Provider>
