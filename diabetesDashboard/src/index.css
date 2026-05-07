@@ -471,17 +471,31 @@
 }
 
 /* RiskTooltip (Phase 4c) — shared Recharts tooltip surface. Matches the
-   .glass-card aesthetic: same border, radius, shadow. */
+   .glass-card aesthetic: same border, radius, shadow.
+   Gradient accent line at the top ties the tooltip to the brand identity
+   without changing the surface color (which would harm the data clarity
+   the rest of the tooltip is providing). */
 .risk-tooltip {
+  position: relative;
   background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: 12px;
-  padding: 0.65rem 0.85rem;
+  padding: 0.7rem 0.85rem 0.65rem;
   font-size: 0.85rem;
   font-family: 'Inter', sans-serif;
   box-shadow: var(--glass-shadow);
   color: var(--text-main);
   pointer-events: none;
+  overflow: hidden;
+}
+.risk-tooltip::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-brand);
 }
 .risk-tooltip__title {
   font-weight: 600;
@@ -927,10 +941,14 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 .table-body-anim tr:nth-child(5) { animation-delay: 0.1s; }
 .table-body-anim tr:nth-child(n+6) { animation-delay: 0.12s; }
 
-/* Tile / grid view in PredictionsDirectory. Phase 4a removed the inner
-   scroll — the parent .card-stack--scroll handles scroll for the whole
-   card, so this is just a padded wrapper now. */
+/* Tile / grid view in PredictionsDirectory. The tile grid is non-virtualized
+   (capped at TILE_LIMIT), so the host needs its own overflow-y so cards
+   beyond the visible area scroll inside the card chrome instead of bleeding
+   out the bottom. */
 .tile-scroll-host {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   padding: 1.5rem 2rem;
 }
 .tile-cap-hint {
