@@ -81,12 +81,7 @@ export default function CommandPalette({
       <Dialog.Portal>
         <Dialog.Overlay className="radix-dialog-overlay" />
         <Dialog.Content className="cmdk-shell" aria-describedby={undefined}>
-          <Dialog.Title style={{
-            position: 'absolute', width: 1, height: 1, padding: 0, margin: -1,
-            overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', borderWidth: 0,
-          }}>
-            Command palette
-          </Dialog.Title>
+          <Dialog.Title className="sr-only">Command palette</Dialog.Title>
           <Command label="Command palette" shouldFilter={false} className="cmdk-root">
             <div className="cmdk-input-wrap">
               <Command.Input
