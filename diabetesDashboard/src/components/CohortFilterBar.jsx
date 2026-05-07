@@ -1,8 +1,9 @@
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useMemo } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { AnimatePresence, motion } from 'motion/react';
-import { Filter, ChevronDown, X, ArrowRight, ArrowLeft, Download, Search } from 'lucide-react';
+import { Filter, ChevronDown, X, ArrowRight, ArrowLeft, Search } from 'lucide-react';
 import { applyFilters, isFilterActive } from '../filters';
+import { labelFor } from '../featureLabels';
 
 // PascalCase aliases — eslint's no-unused-vars doesn't trace JSX member
 // expressions on lowercase identifiers (`<motion.div>`), so we surface the
@@ -131,32 +132,13 @@ export default function CohortFilterBar({
   updateFilters,
   clearAllFilters,
   variant,                    // 'eda' | 'predictions'
-  topDriverLabel,             // optional, EDA only
   onJumpToPredictions,        // optional, EDA only
   onJumpToEDA,                // optional, Predictions only
   searchQuery,                // optional, Predictions only
   onSearchChange,             // optional, Predictions only
-  onExportCSV,                // optional, Predictions only
 }) {
   const filtersActive = isFilterActive(filters);
   const isPredictions = variant === 'predictions';
-
-  // Phase 4a — condensed sticky behaviour. A 1px sentinel sits above the bar;
-  // when it scrolls out of viewport (i.e. user has scrolled past the bar's
-  // initial position), the bar pins and switches to a slim mode. Uses
-  // IntersectionObserver instead of a scroll listener for performance.
-  const sentinelRef = useRef(null);
-  const [isCondensed, setIsCondensed] = useState(false);
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (!sentinel || typeof IntersectionObserver === 'undefined') return undefined;
-    const observer = new IntersectionObserver(
-      ([entry]) => setIsCondensed(!entry.isIntersecting),
-      { threshold: 0 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, []);
 
   // Cohort summary computations live here so the bar is self-sufficient and
   // identical across both tabs.
@@ -178,12 +160,25 @@ export default function CohortFilterBar({
     return (data.filter(d => d.Predicted_Admission === 1).length / globalCount) * 100;
   }, [data, globalCount]);
 
+  // Top driver across the active filter cohort — moved into the bar in this
+  // refresh so EDAView no longer has to compute and prop-drill it.
+  const topDriverLabel = useMemo(() => {
+    if (totalCount === 0 || !filtersActive) return undefined;
+    const counts = {};
+    filteredData.forEach(p => {
+      if (p.Top_Risk_Drivers?.length > 0) {
+        const featureName = p.Top_Risk_Drivers[0].split(' (+')[0];
+        counts[featureName] = (counts[featureName] || 0) + 1;
+      }
+    });
+    const entries = Object.entries(counts);
+    if (entries.length === 0) return undefined;
+    entries.sort((a, b) => b[1] - a[1]);
+    return labelFor(entries[0][0]);
+  }, [filteredData, totalCount, filtersActive]);
+
   return (
-    <>
-      {/* Sentinel: 1px above the bar; IntersectionObserver flips
-          isCondensed once it's scrolled out of view. */}
-      <div ref={sentinelRef} aria-hidden="true" className="cohort-filter-bar__sentinel" />
-    <div className={`cohort-filter-bar ${isCondensed ? 'cohort-filter-bar--condensed' : ''}`}>
+    <div className="cohort-filter-bar">
       <div className="cohort-filter-bar__row">
         <div className="cohort-filter-bar__filters">
           <span className="cohort-filter-bar__label"><Filter size={14} /> Filter</span>
@@ -257,15 +252,9 @@ export default function CohortFilterBar({
               <ArrowLeft size={14} /> View as Cohort
             </button>
           )}
-          {isPredictions && onExportCSV && (
-            <button
-              type="button"
-              onClick={onExportCSV}
-              className="cfb-export"
-            >
-              <Download size={14} /> Export CSV
-            </button>
-          )}
+          {/* Export CSV moved to PredictionsDirectory's per-tab header
+              (Phase 4 follow-up). The bar is now global; per-tab actions
+              live with their tab content. */}
         </div>
       </div>
 
@@ -288,6 +277,5 @@ export default function CohortFilterBar({
         </div>
       )}
     </div>
-    </>
   );
 }

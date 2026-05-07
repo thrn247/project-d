@@ -13,6 +13,7 @@ import EDAView from './components/EDAView';
 import PatientSlideOut from './components/PatientSlideOut';
 import CommandPalette from './components/CommandPalette';
 import ShortcutsHelp from './components/ShortcutsHelp';
+import CohortFilterBar from './components/CohortFilterBar';
 import { Stethoscope, Activity, BarChart2, AlertCircle, HelpCircle, X, Command as CommandIcon } from 'lucide-react';
 import { EMPTY_FILTERS } from './filters';
 import './index.css';
@@ -38,6 +39,10 @@ export default function App() {
   // opened from the command palette (no row context); populated by
   // PredictionsDirectory when opened from a row click.
   const [siblings, setSiblings] = useState([]);
+  // Lifted from PredictionsDirectory in this refresh so the global
+  // CohortFilterBar (now rendered at the App level) can own the search
+  // input. PredictionsDirectory still consumes the value for its row filter.
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -197,6 +202,24 @@ export default function App() {
           </div>
         </header>
 
+        {/* Global filter toolbar — sits between the page header and the
+            scrolling main content. Always visible regardless of scroll
+            position; eliminates the previous in-card sticky behaviour
+            that caused jitter / overlap / lag in EDAView and Predictions. */}
+        {data.length > 0 && (
+          <CohortFilterBar
+            data={data}
+            filters={filters}
+            updateFilters={updateFilters}
+            clearAllFilters={clearAllFilters}
+            variant={activeTab === 'predictions' ? 'predictions' : 'eda'}
+            onJumpToPredictions={onJumpToPredictions}
+            onJumpToEDA={onJumpToEDA}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+        )}
+
         <main className="main-content">
           {data.length > 0 ? (
             <AnimatePresence mode="wait" initial={false}>
@@ -213,10 +236,10 @@ export default function App() {
                     data={data}
                     thresholds={thresholds}
                     filters={filters}
-                    updateFilters={updateFilters}
                     clearAllFilters={clearAllFilters}
-                    onJumpToEDA={onJumpToEDA}
                     openSlideOut={openSlideOut}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
                   />
                 ) : (
                   <EDAView
@@ -225,7 +248,6 @@ export default function App() {
                     filters={filters}
                     updateFilters={updateFilters}
                     clearAllFilters={clearAllFilters}
-                    onJumpToPredictions={onJumpToPredictions}
                   />
                 )}
               </MotionDiv>
