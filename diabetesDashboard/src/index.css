@@ -1089,11 +1089,15 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   backdrop-filter: blur(8px);
   z-index: 200;
 }
-.radix-dialog-overlay[data-state="open"]   { animation: radix-overlay-in 0.25s cubic-bezier(0.32, 0.72, 0, 1); }
-/* Close timing matched to vaul's drawer content exit (~400ms ease-out) so
-   the overlay and the sliding panel fade/slide off together — was 0.15s,
-   which left the panel mid-slide with no backdrop and looked like a flash. */
-.radix-dialog-overlay[data-state="closed"] { animation: radix-overlay-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) reverse; }
+/* `forwards` fill-mode is the load-bearing bit here. Without it, the
+   reverse close-animation runs opacity 1→0 over 400ms then snaps back to
+   the default opacity:1 at animation-end (since `animation-fill-mode`
+   defaults to `none`). That snap, in the brief window before the element
+   unmounts, is the "dim flash recurring after slideout closed" the user
+   reported. `forwards` pins the element at the keyframe's end-state until
+   unmount. */
+.radix-dialog-overlay[data-state="open"]   { animation: radix-overlay-in 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+.radix-dialog-overlay[data-state="closed"] { animation: radix-overlay-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) reverse forwards; }
 
 .radix-dialog-content {
   position: fixed;
@@ -1111,9 +1115,29 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   border: 1px solid var(--border-light);
   z-index: 201;
 }
-.radix-dialog-content[data-state="open"]   { animation: radix-content-in 0.18s ease-out; }
-.radix-dialog-content[data-state="closed"] { animation: radix-content-in 0.12s ease-in reverse; }
+.radix-dialog-content[data-state="open"]   { animation: radix-content-in 0.18s ease-out forwards; }
+.radix-dialog-content[data-state="closed"] { animation: radix-content-in 0.12s ease-in reverse forwards; }
 .radix-dialog-content:focus { outline: none; }
+
+/* Thin custom scrollbar for the dialog so the scroll thumb doesn't run
+   edge-to-edge across the modal's rounded corners (track is inset by the
+   border-radius). scrollbar-gutter: stable reserves space so the layout
+   doesn't shift when the scrollbar appears. */
+.radix-dialog-content {
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-light) transparent;
+}
+.radix-dialog-content::-webkit-scrollbar { width: 6px; }
+.radix-dialog-content::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 1.25rem 0;
+}
+.radix-dialog-content::-webkit-scrollbar-thumb {
+  background: var(--border-light);
+  border-radius: 999px;
+}
+.radix-dialog-content::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* DropdownMenu — used by CohortFilterBar in Step 2. RadioGroup + RadioItem
    give automatic single-select semantics; the ✓ marker is rendered in CSS
@@ -1477,8 +1501,8 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
   display: flex;
   flex-direction: column;
 }
-.cmdk-shell[data-state="open"]   { animation: cmdk-shell-in 0.2s ease-out; }
-.cmdk-shell[data-state="closed"] { animation: cmdk-shell-in 0.15s ease-in reverse; }
+.cmdk-shell[data-state="open"]   { animation: cmdk-shell-in 0.2s ease-out forwards; }
+.cmdk-shell[data-state="closed"] { animation: cmdk-shell-in 0.15s ease-in reverse forwards; }
 @keyframes cmdk-shell-in {
   from { opacity: 0; transform: translateX(-50%) scale(0.96); }
   to   { opacity: 1; transform: translateX(-50%) scale(1); }
