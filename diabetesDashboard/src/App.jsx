@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as Tooltip from '@radix-ui/react-tooltip';
+import * as Tabs from '@radix-ui/react-tabs';
 import { MotionConfig } from 'motion/react';
 import { Toaster } from 'sonner';
 import PredictionsDirectory from './components/PredictionsDirectory';
@@ -138,6 +139,7 @@ export default function App() {
   return (
     <MotionConfig reducedMotion="user">
     <Tooltip.Provider delayDuration={150}>
+    <Tabs.Root value={activeTab} onValueChange={setActiveTab} asChild>
       <div className="app-container">
         <header className="header">
           <div className="icon-row">
@@ -150,20 +152,16 @@ export default function App() {
             </div>
           </div>
 
-          <nav className="nav-links">
-            <button
-              className={`nav-btn ${activeTab === 'eda' ? 'active' : ''}`}
-              onClick={() => setActiveTab('eda')}
-            >
-              <Activity size={16} /> Cohort Overview
-            </button>
-            <button
-              className={`nav-btn ${activeTab === 'predictions' ? 'active' : ''}`}
-              onClick={() => setActiveTab('predictions')}
-            >
-              <BarChart2 size={16} /> Patient Predictions
-            </button>
-          </nav>
+          <Tabs.List asChild>
+            <nav className="nav-links">
+              <Tabs.Trigger value="eda" className="nav-btn">
+                <Activity size={16} /> Cohort Overview
+              </Tabs.Trigger>
+              <Tabs.Trigger value="predictions" className="nav-btn">
+                <BarChart2 size={16} /> Patient Predictions
+              </Tabs.Trigger>
+            </nav>
+          </Tabs.List>
 
           <div className="icon-row">
             <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: '500' }}>Analyzed: {data.length.toLocaleString()} Profiles</span>
@@ -190,8 +188,19 @@ export default function App() {
 
         <main className="main-content">
           {data.length > 0 ? (
-            activeTab === 'predictions'
-              ? <PredictionsDirectory
+            <>
+              <Tabs.Content value="eda" className="tab-panel">
+                <EDAView
+                  data={data}
+                  thresholds={thresholds}
+                  filters={filters}
+                  updateFilters={updateFilters}
+                  clearAllFilters={clearAllFilters}
+                  onJumpToPredictions={onJumpToPredictions}
+                />
+              </Tabs.Content>
+              <Tabs.Content value="predictions" className="tab-panel">
+                <PredictionsDirectory
                   data={data}
                   thresholds={thresholds}
                   filters={filters}
@@ -200,14 +209,8 @@ export default function App() {
                   onJumpToEDA={onJumpToEDA}
                   openSlideOut={openSlideOut}
                 />
-              : <EDAView
-                  data={data}
-                  thresholds={thresholds}
-                  filters={filters}
-                  updateFilters={updateFilters}
-                  clearAllFilters={clearAllFilters}
-                  onJumpToPredictions={onJumpToPredictions}
-                />
+              </Tabs.Content>
+            </>
           ) : (
             <div className="empty-fallback">
               <AlertCircle size={48} color="var(--danger)" className="empty-fallback__icon" />
@@ -217,6 +220,7 @@ export default function App() {
           )}
         </main>
       </div>
+    </Tabs.Root>
 
       {/* About this model — methods note overlay (Radix Dialog).
           Replaced the hand-rolled backdrop / click-outside / focus-trap with
