@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Drawer } from 'vaul';
+import * as Progress from '@radix-ui/react-progress';
 import {
   X, User, Activity, AlertCircle, AlertTriangle, Flame, CircleDot,
   Wrench, Lock, ArrowLeft, ArrowRight,
@@ -34,47 +35,43 @@ const SeverityIcon = ({ severity, size = 14 }) => {
   return Icon ? <Icon size={size} /> : null;
 };
 
-const ProbBar = ({ label, value, color, threshold, context, suppressed = false, suppressedText = '' }) => (
-  <div style={{ opacity: suppressed ? 0.6 : 1 }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem', alignItems: 'baseline' }}>
-      <span className="text-eyebrow">{label}</span>
-      <span style={{ fontSize: '1.05rem', fontFamily: 'Manrope, sans-serif', fontWeight: 700, color: suppressed ? 'var(--text-muted)' : color }}>
-        {suppressed ? '—' : `${value.toFixed(1)}%`}
-      </span>
-    </div>
-    <div style={{ position: 'relative' }}>
-      <div style={{ height: '12px', background: 'var(--bg-surface-high)', borderRadius: '999px', overflow: 'hidden', position: 'relative' }}>
-        {!suppressed && (
-          <div style={{ height: '100%', width: `${Math.min(100, Math.max(0, value))}%`, background: color, borderRadius: '999px', transition: 'width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)' }} />
+// Phase 2c — Radix Progress underpins the bar; Indicator translateX-driven
+// transition gives us the same 0.4s ease as before but with proper a11y
+// (role=progressbar, aria-valuenow, aria-valuemin/max). The threshold tick
+// stays as a sibling absolute element (Radix Progress doesn't model it).
+const ProbBar = ({ label, value, color, threshold, context, suppressed = false, suppressedText = '' }) => {
+  const clamped = Math.min(100, Math.max(0, value));
+  return (
+    <div className={`probbar${suppressed ? ' probbar--suppressed' : ''}`}>
+      <div className="probbar__head">
+        <span className="text-eyebrow">{label}</span>
+        <span className="probbar__value" style={{ color: suppressed ? 'var(--text-muted)' : color }}>
+          {suppressed ? '—' : `${value.toFixed(1)}%`}
+        </span>
+      </div>
+      <div className="probbar__track-wrap">
+        <Progress.Root className="probbar__track" value={suppressed ? 0 : clamped}>
+          {!suppressed && (
+            <Progress.Indicator
+              className="probbar__fill"
+              style={{ transform: `translateX(-${100 - clamped}%)`, background: color }}
+            />
+          )}
+        </Progress.Root>
+        {threshold !== undefined && !suppressed && (
+          <div
+            className="probbar__tick"
+            style={{ left: `${threshold}%` }}
+            title={`Model threshold: ${threshold.toFixed(1)}%`}
+            aria-hidden="true"
+          />
         )}
       </div>
-      {/* Subtle vertical tick at the model threshold — visual reinforcement of where
-          the cutoff sits without putting the numeric value on the chart. */}
-      {threshold !== undefined && !suppressed && (
-        <div
-          style={{
-            position: 'absolute',
-            top: '-3px',
-            bottom: '-3px',
-            left: `${threshold}%`,
-            width: '2px',
-            background: 'var(--text-main)',
-            opacity: 0.45,
-            pointerEvents: 'none',
-          }}
-          title={`Model threshold: ${threshold.toFixed(1)}%`}
-          aria-hidden="true"
-        />
-      )}
+      {context && !suppressed && <div className="probbar-caption">{context}</div>}
+      {suppressed && suppressedText && <div className="probbar-caption">{suppressedText}</div>}
     </div>
-    {context && !suppressed && (
-      <div className="probbar-caption">{context}</div>
-    )}
-    {suppressed && suppressedText && (
-      <div className="probbar-caption">{suppressedText}</div>
-    )}
-  </div>
-);
+  );
+};
 
 // Parse "FEATURE_NAME (+XX.X%)" strings from the payload into chart-ready rows,
 // with clinical labels via the shared featureLabels map.

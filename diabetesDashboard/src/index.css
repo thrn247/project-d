@@ -428,6 +428,48 @@
   margin-top: 0.4rem;
 }
 
+/* ProbBar (Phase 2c — wraps Radix Progress). The .probbar__fill is a
+   <Progress.Indicator>; Radix sets data-state on it. We drive width via
+   transform: translateX so the layout stays at 100% width and only the
+   visible portion shifts — same animation idiom Radix Progress's docs
+   recommend. */
+.probbar {}
+.probbar--suppressed { opacity: 0.6; }
+.probbar__head {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  align-items: baseline;
+}
+.probbar__value {
+  font-size: 1.05rem;
+  font-family: 'Manrope', sans-serif;
+  font-weight: 700;
+}
+.probbar__track-wrap { position: relative; }
+.probbar__track {
+  height: 12px;
+  background: var(--bg-surface-high);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+.probbar__fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+.probbar__tick {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--text-main);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -501,12 +543,22 @@ p { color: var(--text-muted); line-height: 1.6; font-size: 0.875rem; }
 }
 
 .nav-btn:hover { color: var(--text-main); }
-.nav-btn.active { 
-  color: #fff; 
-  background: var(--primary); 
+.nav-btn.active,
+.nav-btn[data-state="active"] {
+  color: #fff;
+  background: var(--primary);
   font-weight: 600;
   box-shadow: 0 0 15px var(--primary-glow);
 }
+.nav-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Tabs.Content panel — passes height:100% through to PredictionsDirectory's
+   card layout (which expects a parent with height to fill). */
+.tab-panel { height: 100%; }
+.tab-panel:focus { outline: none; }
 
 .main-content {
   padding: 3rem;
