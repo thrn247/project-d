@@ -1,7 +1,14 @@
 import React, { useMemo } from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { AnimatePresence, motion } from 'motion/react';
 import { Filter, ChevronDown, X, ArrowRight, ArrowLeft, Download, Search } from 'lucide-react';
 import { applyFilters, isFilterActive } from '../filters';
+
+// PascalCase aliases — eslint's no-unused-vars doesn't trace JSX member
+// expressions on lowercase identifiers (`<motion.div>`), so we surface the
+// component bindings explicitly here.
+const MotionDiv = motion.div;
+const MotionButton = motion.button;
 
 // Single source of truth for the cohort filter UI. Replaces three previously
 // separate UIs: bare <select>s in EDAView, severity-pill tabs in
@@ -57,7 +64,11 @@ function FilterDropdown({ label, value, defaultValue, options, onChange }) {
     : label;
 
   return (
-    <div className={`cfb-dropdown-group ${isActive ? 'cfb-dropdown-group--active' : ''}`}>
+    <MotionDiv
+      layout
+      transition={{ duration: 0.2, ease: [0.25, 0.8, 0.25, 1] }}
+      className={`cfb-dropdown-group ${isActive ? 'cfb-dropdown-group--active' : ''}`}
+    >
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <button
@@ -93,17 +104,24 @@ function FilterDropdown({ label, value, defaultValue, options, onChange }) {
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
-      {isActive && (
-        <button
-          type="button"
-          className="cfb-dropdown-clear"
-          onClick={() => onChange(defaultValue)}
-          aria-label={`Clear ${label} filter`}
-        >
-          <X size={11} />
-        </button>
-      )}
-    </div>
+      <AnimatePresence initial={false}>
+        {isActive && (
+          <MotionButton
+            key="clear"
+            type="button"
+            className="cfb-dropdown-clear"
+            onClick={() => onChange(defaultValue)}
+            aria-label={`Clear ${label} filter`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+          >
+            <X size={11} />
+          </MotionButton>
+        )}
+      </AnimatePresence>
+    </MotionDiv>
   );
 }
 
