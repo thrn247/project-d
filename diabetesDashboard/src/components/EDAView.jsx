@@ -7,7 +7,7 @@ import EmptyState from './EmptyState';
 import { labelFor } from '../featureLabels';
 import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
-import { useNumberTween } from '../hooks/useNumberTween';
+import NumberFlow from '@number-flow/react';
 
 export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters, onJumpToPredictions }) {
   const tips = useMemo(() => getTips(thresholds), [thresholds]);
@@ -46,12 +46,11 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
     return (data.reduce((s, d) => s + (d.Stage_1_Admission_Risk || 0), 0) / data.length) * 100;
   }, [data]);
 
-  // KPI number tweens — ease the displayed value when filters change so the
-  // numbers feel coordinated with the chart re-render rather than snapping.
-  // Respects prefers-reduced-motion (snaps for those users).
-  const tweenedCohortCount = useNumberTween(filteredData.length, 450);
-  const tweenedAvgRisk = useNumberTween(metrics.avgRisk, 450);
-  const tweenedReadmitRate = useNumberTween(metrics.readmitRate, 450);
+  // KPI number animation is now driven by <NumberFlow> at the render site
+  // (digit-ticker animation on filter change). Phase 2a replaced the previous
+  // useNumberTween-driven scalar tween. The hook is still exported from
+  // hooks/useNumberTween.js for any future non-numeric scalar tween that
+  // doesn't fit NumberFlow's digit-flip model.
 
   const filtersActive = isFilterActive(filters);
   const activeFilterSummary = [
@@ -224,7 +223,9 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               </span>
               <Users size={20} color="var(--primary)" />
             </div>
-            <div className="value kpi-value">{Math.round(tweenedCohortCount).toLocaleString()}</div>
+            <div className="value kpi-value">
+              <NumberFlow value={filteredData.length} />
+            </div>
             <p className="text-stat-caption">
               {filtersActive ? activeFilterSummary : 'All patients in cohort'}
             </p>
@@ -239,7 +240,8 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               <TrendingUp size={20} color="var(--primary)" />
             </div>
             <div className="value kpi-value">
-              {tweenedAvgRisk.toFixed(1)}<span className="kpi-pct-suffix">%</span>
+              <NumberFlow value={metrics.avgRisk} format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }} />
+              <span className="kpi-pct-suffix">%</span>
             </div>
             <p className="text-stat-caption">
               {filtersActive
@@ -257,7 +259,8 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
               <AlertTriangle size={20} color="var(--warning)" />
             </div>
             <div className="value kpi-value--warning">
-              {tweenedReadmitRate.toFixed(1)}<span className="kpi-pct-suffix">%</span>
+              <NumberFlow value={metrics.readmitRate} format={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }} />
+              <span className="kpi-pct-suffix">%</span>
             </div>
             <p className="text-stat-caption">
               Percent of the {metrics.totalAdmitted.toLocaleString()} admitted expected to readmit

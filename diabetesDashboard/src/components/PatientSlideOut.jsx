@@ -1,9 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import * as Dialog from '@radix-ui/react-dialog';
+import { Drawer } from 'vaul';
 import {
   X, User, Activity, AlertCircle, AlertTriangle, Flame, CircleDot,
   Wrench, Lock, ArrowLeft, ArrowRight,
 } from 'lucide-react';
+
+// Responsive direction for vaul: slides from the right on desktop (≥1024px),
+// from the bottom on mobile/tablet. vaul's `direction` is a static prop, so
+// we drive it with a matchMedia listener.
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() =>
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(min-width: 1024px)').matches
+  );
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+    const mql = window.matchMedia('(min-width: 1024px)');
+    const handler = (e) => setIsDesktop(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, []);
+  return isDesktop;
+}
 import { ResponsiveContainer, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, Cell } from 'recharts';
 import { labelFor, isModifiable } from '../featureLabels';
 import InfoTip from './InfoTip';
@@ -131,6 +150,7 @@ export default function PatientSlideOut({
 }) {
   const [activeDriverTab, setActiveDriverTab] = useState('admission');
   const tips = useMemo(() => getTips(thresholds), [thresholds]);
+  const isDesktop = useIsDesktop();
 
   // Pre-sort cohort risk scores once; used for percentile lookups when patients change.
   const sortedAdmissionRisks = useMemo(() => {
@@ -219,15 +239,19 @@ export default function PatientSlideOut({
     !readmissionUnavailable && (patient?.Top_Readmission_Drivers === undefined);
 
   return (
-    <Dialog.Root open={isOpen} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="radix-dialog-overlay" />
-        <Dialog.Content className="slideout-panel" aria-describedby={undefined}>
+    <Drawer.Root
+      open={isOpen}
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      direction={isDesktop ? 'right' : 'bottom'}
+    >
+      <Drawer.Portal>
+        <Drawer.Overlay className="radix-dialog-overlay" />
+        <Drawer.Content className="slideout-panel" aria-describedby={undefined}>
           {/* Top bar — title, sibling nav, close. Pinned at top of panel. */}
           <div className="slideout-header">
-            <Dialog.Title asChild>
-              <h2 style={{ margin: 0, fontSize: '1.05rem' }}>Patient Record</h2>
-            </Dialog.Title>
+            <Drawer.Title asChild>
+              <h2 className="slideout-title">Patient Record</h2>
+            </Drawer.Title>
             <div className="slideout-actions">
               {canNavigate && (
                 <>
@@ -251,11 +275,11 @@ export default function PatientSlideOut({
                   </button>
                 </>
               )}
-              <Dialog.Close asChild>
+              <Drawer.Close asChild>
                 <button className="icon-btn" aria-label="Close patient record">
                   <X size={20} />
                 </button>
-              </Dialog.Close>
+              </Drawer.Close>
             </div>
           </div>
 
@@ -435,8 +459,8 @@ export default function PatientSlideOut({
               </div>
             </div>
           )}
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+        </Drawer.Content>
+      </Drawer.Portal>
+    </Drawer.Root>
   );
 }
