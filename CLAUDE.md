@@ -13,7 +13,7 @@
 > **Target definition note — deliberate design choice (NOT a flaw).** `Readmitted_Yes_No = (Num_Admissions > 1)` flags any patient with two or more inpatient admissions across the data window. This is **not** the standard 30-day readmission window used by UCI / LACE / MIMIC-III studies, and the choice is intentional: the 30-day positive class on this TPA dataset is too sparse for stable training (≤10% of admitted patients vs the current 27.82% under all-cause recurrence). A 30-day target would push the readmission model into a degenerate-imbalance regime that the n=7,959 admitted cohort cannot support. Internally coherent and clinically useful for "ever-readmits" risk; **every literature comparison against 30-day-target studies must explicitly state the target-definition difference** — see §8 (benchmarking) and §13 (limitations). This is the methodological cost we accept in exchange for sufficient positive-class signal.
 
 **Repo:** `github.com/thrn247/project-d`
-**Live dashboard:** `https://projectd-theta.vercel.app`
+**Live dashboard:** `https://darthealth.vercel.app`
 
 **Methodological signature (novel vs. published literature):** A **dual-track** design — Track A trains on all patients to predict admission; Track B trains only on admitted patients to predict readmission. This split is not used by any of the comparator studies (UCI 130-US Hospitals, MIMIC-III, Health Facts, Temple EHR, etc.).
 

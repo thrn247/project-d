@@ -5,7 +5,7 @@ Final-year capstone (`BDH2372 Research Project II`, IMU University, Bachelor in 
 - **Cohort:** 61,406 patients (ICD-10 `E11.*` filter) → 7,959 admitted → 2,214 readmitted
 - **Champion model (readmission):** XGBoost, ROC-AUC 0.876, PR-AUC 0.767
 - **Novel design:** dual-track — Track A trains on all patients, Track B trains only on admitted patients
-- **Live dashboard:** https://projectd-theta.vercel.app
+- **Live dashboard:** https://darthealth.vercel.app
 
 See [CLAUDE.md](CLAUDE.md) for the full spec, dataset facts, and known issues.
 
