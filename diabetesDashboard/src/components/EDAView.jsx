@@ -10,6 +10,27 @@ import { getTips } from '../copy';
 import { applyFilters, ageBandFor, isFilterActive } from '../filters';
 import NumberFlow from '@number-flow/react';
 
+// Recharts Tooltip cursor that catches clicks in its full hover region so
+// users can filter even when the underlying bar is too short to click on
+// (e.g. high-risk bins that hold a small fraction of the cohort). Recharts
+// hands us x/y/width/height + payload via cloneElement; onPick is the
+// filter handler captured at the call site.
+function ClickableCursor({ x, y, width, height, payload, onPick }) {
+  const datum = payload?.[0]?.payload;
+  const handle = () => { if (datum?.name) onPick(datum.name); };
+  return (
+    <rect
+      x={x}
+      y={y}
+      width={width}
+      height={height}
+      fill="rgba(120, 120, 120, 0.05)"
+      style={{ cursor: 'pointer' }}
+      onClick={handle}
+    />
+  );
+}
+
 export default function EDAView({ data, thresholds, filters, updateFilters, clearAllFilters }) {
   const tips = useMemo(() => getTips(thresholds), [thresholds]);
 
@@ -276,17 +297,12 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                 <BarChart
                   data={ageRiskData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-                  onClick={(state) => {
-                    const p = state?.activePayload?.[0]?.payload;
-                    if (p?.name) onAgeBandClick(p.name);
-                  }}
-                  className="cohort-clickable-chart"
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                   <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => v + '%'} />
                   <Tooltip
-                    cursor={{ fill: 'rgba(120,120,120,0.05)' }}
+                    cursor={<ClickableCursor onPick={onAgeBandClick} />}
                     content={(props) => {
                       const p = props.payload?.[0]?.payload;
                       if (!p) return null;
@@ -309,6 +325,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     radius={[6, 6, 0, 0]}
                     cursor="pointer"
                     animationDuration={400}
+                    onClick={(d) => onAgeBandClick(d.name)}
                   >
                     <LabelList
                       dataKey="count"
@@ -386,11 +403,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                 <BarChart
                   data={riskHistogramData}
                   margin={{ top: 24, right: 10, left: 0, bottom: 0 }}
-                  onClick={(state) => {
-                    const p = state?.activePayload?.[0]?.payload;
-                    if (p?.name) onRiskBandClick(p.name);
-                  }}
-                  className="cohort-clickable-chart"
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                   <XAxis
@@ -406,7 +418,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                   />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                   <Tooltip
-                    cursor={{ fill: 'rgba(120,120,120,0.05)' }}
+                    cursor={<ClickableCursor onPick={onRiskBandClick} />}
                     content={(props) => {
                       const p = props.payload?.[0]?.payload;
                       if (!p) return null;
@@ -429,6 +441,7 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     radius={[4, 4, 0, 0]}
                     cursor="pointer"
                     animationDuration={400}
+                    onClick={(d) => onRiskBandClick(d.name)}
                   >
                     {riskHistogramData.map((entry, index) => (
                       <Cell

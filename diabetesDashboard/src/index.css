@@ -512,18 +512,6 @@
   color: var(--primary);
 }
 
-/* Make the entire cursor region (the grey shaded vertical strip Recharts
-   draws when hovering) clickable on cross-filter charts — previously
-   only the bar itself accepted clicks, which was painful to hit on tiny
-   high-risk-band bars. The chart-level onClick handler in EDAView reads
-   activePayload from the cursor's anchor and triggers the same filter
-   call. cursor: pointer here is the visible affordance. */
-.cohort-clickable-chart .recharts-tooltip-cursor,
-.cohort-clickable-chart .recharts-rectangle.recharts-tooltip-cursor {
-  cursor: pointer;
-}
-.cohort-clickable-chart .recharts-bar-rectangle { cursor: pointer; }
-
 /* Threshold reference-line chip (Phase 4d) — sits on the risk histogram
    anchored above the dashed danger-coloured ReferenceLine. Same pill
    silhouette as the active filter chips for visual continuity. */
