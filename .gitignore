@@ -37,16 +37,13 @@ ML_pipeline/models/
 # !ML_pipeline/models/final_random_forest.pkl
 
 # ===============================================
-# 4. FOLDER: diabetesDashboard/.claude (uipro skill)
+# 4. CLAUDE-RELATED LOCAL TOOLING (kept on disk, never tracked)
 # ===============================================
-# Allow the UI/UX Pro Max design-intelligence skill that was installed
-# via `uipro init --ai claude` so future sessions and collaborators have
-# access to the same knowledge base. CSV data files inside need explicit
-# re-inclusion because the global *.csv rule above otherwise blocks them.
-# __pycache__/ remains excluded by rule above (Git negation can't re-
-# include files inside an explicitly-excluded directory).
-!diabetesDashboard/.claude/
-!diabetesDashboard/.claude/**
-# Re-exclude Python bytecode caches inside the skill (the !**/ allowlist
-# above otherwise swallows them despite the global __pycache__/ rule).
-diabetesDashboard/.claude/**/__pycache__/
+# Anything Claude Code creates — context files, project-local skills,
+# settings, plans — stays out of version control. Each developer can
+# install / regenerate locally as needed.
+CLAUDE.md
+.claude/
+**/.claude/
+.cursor/
+.windsurf/
