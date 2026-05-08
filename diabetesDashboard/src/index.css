@@ -66,14 +66,15 @@
 .chart-canvas       { width: 100%; height: 280px; }
 
 /* Component classes */
-.brand-tile {
-  background: var(--gradient-brand);
-  padding: 0.6rem;
-  border-radius: 12px;
-  box-shadow: var(--shadow-brand);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* Brand logo — the SVG itself carries its own rounded background, so this
+   is a sizing rule only. Drop-shadow gives the same lift the previous
+   .brand-tile element had via box-shadow. */
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  display: block;
+  flex-shrink: 0;
+  filter: drop-shadow(var(--shadow-brand));
 }
 
 .chart-card {
@@ -510,6 +511,18 @@
   font-size: 0.78rem;
   color: var(--primary);
 }
+
+/* Make the entire cursor region (the grey shaded vertical strip Recharts
+   draws when hovering) clickable on cross-filter charts — previously
+   only the bar itself accepted clicks, which was painful to hit on tiny
+   high-risk-band bars. The chart-level onClick handler in EDAView reads
+   activePayload from the cursor's anchor and triggers the same filter
+   call. cursor: pointer here is the visible affordance. */
+.cohort-clickable-chart .recharts-tooltip-cursor,
+.cohort-clickable-chart .recharts-rectangle.recharts-tooltip-cursor {
+  cursor: pointer;
+}
+.cohort-clickable-chart .recharts-bar-rectangle { cursor: pointer; }
 
 /* Threshold reference-line chip (Phase 4d) — sits on the risk histogram
    anchored above the dashed danger-coloured ReferenceLine. Same pill

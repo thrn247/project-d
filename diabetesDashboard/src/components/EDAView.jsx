@@ -273,7 +273,15 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
             </h3>
             <div className="chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={ageRiskData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <BarChart
+                  data={ageRiskData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
+                  onClick={(state) => {
+                    const p = state?.activePayload?.[0]?.payload;
+                    if (p?.name) onAgeBandClick(p.name);
+                  }}
+                  className="cohort-clickable-chart"
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                   <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={11} tickLine={false} axisLine={false} />
                   <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={v => v + '%'} />
@@ -299,7 +307,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     dataKey="avgRisk"
                     barSize={36}
                     radius={[6, 6, 0, 0]}
-                    onClick={(d) => onAgeBandClick(d.name)}
                     cursor="pointer"
                     animationDuration={400}
                   >
@@ -376,7 +383,15 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
             </h3>
             <div className="chart-canvas">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={riskHistogramData} margin={{ top: 24, right: 10, left: 0, bottom: 0 }}>
+                <BarChart
+                  data={riskHistogramData}
+                  margin={{ top: 24, right: 10, left: 0, bottom: 0 }}
+                  onClick={(state) => {
+                    const p = state?.activePayload?.[0]?.payload;
+                    if (p?.name) onRiskBandClick(p.name);
+                  }}
+                  className="cohort-clickable-chart"
+                >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-light)" />
                   <XAxis
                     type="number"
@@ -412,7 +427,6 @@ export default function EDAView({ data, thresholds, filters, updateFilters, clea
                     dataKey="count"
                     barSize={28}
                     radius={[4, 4, 0, 0]}
-                    onClick={(d) => onRiskBandClick(d.name)}
                     cursor="pointer"
                     animationDuration={400}
                   >

@@ -14,7 +14,7 @@ import PatientSlideOut from './components/PatientSlideOut';
 import CommandPalette from './components/CommandPalette';
 import ShortcutsHelp from './components/ShortcutsHelp';
 import CohortFilterBar from './components/CohortFilterBar';
-import { Stethoscope, Activity, BarChart2, AlertCircle, HelpCircle, X, Command as CommandIcon } from 'lucide-react';
+import { Activity, BarChart2, AlertCircle, HelpCircle, X, Command as CommandIcon } from 'lucide-react';
 import { EMPTY_FILTERS } from './filters';
 import './index.css';
 
@@ -159,9 +159,7 @@ export default function App() {
       <div className="app-container">
         <header className="header">
           <div className="icon-row">
-            <div className="brand-tile">
-              <Stethoscope color="white" />
-            </div>
+            <img src="/logo.svg" alt="DART logo" className="brand-logo" />
             <div>
               <h1 style={{ fontSize: '1.35rem', margin: '0' }}>DART</h1>
               <p style={{ margin: '0', fontSize: '0.85rem' }}>Diabetic Admission Readmission Tool</p>
