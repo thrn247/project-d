@@ -3,11 +3,10 @@
 Final-year capstone (`BDH2372 Research Project II`, IMU University, Bachelor in Digital Health (Hons)). DART trains XGBoost risk scores for (A) initial hospital admission and (B) readmission in Malaysian Type-2 diabetes patients on a PMCare Third-Party-Administrator claims extract, and surfaces them through a React expert-review dashboard.
 
 - **Cohort:** 61,406 patients (ICD-10 `E11.*` filter) → 7,959 admitted → 2,214 readmitted
-- **Champion model (readmission):** XGBoost, ROC-AUC 0.876, PR-AUC 0.767
-- **Novel design:** dual-track — Track A trains on all patients, Track B trains only on admitted patients
+- **Champion model (admission):** XGBoost (isotonic-calibrated), ROC-AUC 0.868, PR-AUC 0.540, Brier 0.082
+- **Champion model (readmission):** XGBoost (isotonic-calibrated), ROC-AUC 0.799, PR-AUC 0.585, Brier 0.156
+- **Novel design:** dual-track — Track A trains on all patients to predict admission; Track B trains only on the admitted subset to predict readmission
 - **Live dashboard:** https://darthealth.vercel.app
-
-See [CLAUDE.md](CLAUDE.md) for the full spec, dataset facts, and known issues.
 
 ---
 
