@@ -2,19 +2,18 @@ import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Keyboard, X } from 'lucide-react';
 
-// Lightweight keyboard-shortcut reference. Triggered by `?` global keybinding
-// (suppressed when typing in inputs). Esc closes; Tab cycles focus inside.
-//
-// Step 5 will add Arrow Left / Right entries once slideout sibling navigation
-// is wired.
 const SHORTCUTS = [
   { keys: ['Ctrl/Cmd', 'K'], description: 'Open command palette' },
+  { keys: ['Ctrl/Cmd', '1'], description: 'Switch to Cohort Overview tab' },
+  { keys: ['Ctrl/Cmd', '2'], description: 'Switch to Patient Predictions tab' },
   { keys: ['?'],              description: 'Show this dialog' },
   { keys: ['Esc'],            description: 'Close any dialog or panel' },
   { keys: ['Tab'],            description: 'Move focus forward' },
   { keys: ['Shift', 'Tab'],   description: 'Move focus backward' },
   { keys: ['Enter'],          description: 'Open the focused patient row' },
   { keys: ['Space'],          description: 'Open the focused patient row' },
+  { keys: ['←'],              description: 'Previous patient (in slideout)' },
+  { keys: ['→'],              description: 'Next patient (in slideout)' },
 ];
 
 export default function ShortcutsHelp({ open, onOpenChange }) {
